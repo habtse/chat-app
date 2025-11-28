@@ -1,0 +1,85 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// --- Data Model (SDS 1.2) ---
+
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  name          String
+  passwordHash  String?   // For JWT Auth
+  profilePicUrl String?
+  authType      String    // "JWT" or "GOOGLE"
+  isOnline      Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  lastActive    DateTime  @updatedAt // SDS 1.2
+
+  // Relationships
+  sentMessages  Message[]
+  memberships   GroupMember[]
+  categories    UserCategory[]
+}
+
+model Category {
+  id            String    @id @default(uuid())
+  name          String    @unique
+  
+  // Relationships
+  sessions      ChatSession[]
+  userCategories UserCategory[]
+}
+
+model UserCategory {
+  userId        String
+  categoryId    String
+  
+  user          User        @relation(fields: [userId], references: [id])
+  category      Category    @relation(fields: [categoryId], references: [id])
+
+  @@id([userId, categoryId])
+}
+
+model ChatSession {
+  id            String    @id @default(uuid())
+  isGroup       Boolean   @default(false)
+  name          String?   // For group chats
+  categoryId    String?
+  
+  // Relationships
+  category      Category? @relation(fields: [categoryId], references: [id])
+  members       GroupMember[]
+  messages      Message[]
+}
+
+model GroupMember {
+  userId        String
+  chatSessionId String
+  isAdmin       Boolean   @default(false) // SDS 1.2
+  
+  user          User        @relation(fields: [userId], references: [id])
+  chatSession   ChatSession @relation(fields: [chatSessionId], references: [id])
+
+  @@id([userId, chatSessionId])
+}
+
+model Message {
+  id            String    @id @default(uuid())
+  content       String
+  senderId      String
+  chatSessionId String
+  isRead        Boolean   @default(false) // SDS 1.2 (Bonus B3)
+  createdAt     DateTime  @default(now())
+
+  // Relationships
+  sender        User        @relation(fields: [senderId], references: [id])
+  chatSession   ChatSession @relation(fields: [chatSessionId], references: [id])
+}
