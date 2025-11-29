@@ -51,8 +51,8 @@ export class WebSocketClient {
                 // Send authentication message
                 this.send({
                     type: 'CONNECT',
-                    payload: { token },
-                });
+                    token,
+                } as any);
             };
 
             this.ws.onmessage = (event) => {

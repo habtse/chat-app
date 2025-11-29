@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { Sidebar, Session } from './sidebar';
 import { ChatWindow } from './chat-window';
 import { apiClient } from '@/lib/api-client';
+import { wsClient } from '@/lib/websocket-client';
 import { useAuth } from '@/lib/auth-context';
 
 export function ChatLayout() {
@@ -16,6 +17,28 @@ export function ChatLayout() {
             loadSessions();
         }
     }, [accessToken]);
+
+    // Listen for user status updates
+    useEffect(() => {
+        const handleStatusUpdate = (data: { userId: string; isOnline: boolean }) => {
+            setSessions((prevSessions) =>
+                prevSessions.map((session) => ({
+                    ...session,
+                    participants: session.participants.map((participant) =>
+                        participant.id === data.userId
+                            ? { ...participant, isOnline: data.isOnline }
+                            : participant
+                    ),
+                }))
+            );
+        };
+
+        wsClient.on('USER_STATUS_UPDATE', handleStatusUpdate);
+
+        return () => {
+            wsClient.off('USER_STATUS_UPDATE', handleStatusUpdate);
+        };
+    }, []);
 
     const loadSessions = async () => {
         try {
