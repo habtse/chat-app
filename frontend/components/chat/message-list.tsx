@@ -22,9 +22,30 @@ interface Message {
 interface MessageListProps {
     messages: Message[];
     session?: any;
+    searchQuery?: string;
 }
 
-export function MessageList({ messages, session }: MessageListProps) {
+// Helper function to highlight search terms
+function highlightText(text: string, query: string) {
+    if (!query || !query.trim()) return text;
+
+    const parts = text.split(new RegExp(`(${query})`, 'gi'));
+    return (
+        <>
+            {parts.map((part, index) =>
+                part.toLowerCase() === query.toLowerCase() ? (
+                    <mark key={index} className="bg-yellow-200 dark:bg-yellow-600 text-zinc-900 dark:text-zinc-100 font-semibold px-0.5 rounded">
+                        {part}
+                    </mark>
+                ) : (
+                    part
+                )
+            )}
+        </>
+    );
+}
+
+export function MessageList({ messages, session, searchQuery }: MessageListProps) {
     const { user } = useAuth();
     const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -74,8 +95,8 @@ export function MessageList({ messages, session }: MessageListProps) {
                                             {message.sender.name}
                                         </p>
                                     )}
-                                    <p className="text-[15px] leading-relaxed whitespace-pre-wrap break-words">
-                                        {message.content}
+                                    <p className="text-[15px] leading-relaxed break-words">
+                                        {highlightText(message.content, searchQuery || '')}
                                     </p>
                                     <div className={cn(
                                         "flex items-center justify-end gap-1 mt-1.5",

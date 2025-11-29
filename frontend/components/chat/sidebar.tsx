@@ -39,9 +39,19 @@ export function Sidebar({ sessions, selectedId, onSelect, currentUserId, classNa
     const [searchQuery, setSearchQuery] = useState('');
 
     const filteredSessions = sessions.filter(session => {
+        if (!searchQuery.trim()) return true;
+
+        const query = searchQuery.toLowerCase();
         const otherParticipants = session.participants?.filter(p => p.id !== currentUserId) || [];
         const displayName = session.name || otherParticipants[0]?.name || 'Unknown User';
-        return displayName.toLowerCase().includes(searchQuery.toLowerCase());
+        const lastMessageContent = session.lastMessage?.content || '';
+
+        // Search by display name, participant names, or last message content
+        return (
+            displayName.toLowerCase().includes(query) ||
+            otherParticipants.some(p => p.name.toLowerCase().includes(query)) ||
+            lastMessageContent.toLowerCase().includes(query)
+        );
     });
 
     return (

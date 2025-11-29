@@ -8,7 +8,8 @@ import { wsClient } from '@/lib/websocket-client';
 import { useAuth } from '@/lib/auth-context';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { Loader2, Phone, Video, MoreVertical, Users } from 'lucide-react';
+import { Loader2, Phone, Video, MoreVertical, Users, Search, X } from 'lucide-react';
+import { Input } from '../ui/input';
 
 interface ChatWindowProps {
     sessionId: string | null;
@@ -20,6 +21,15 @@ export function ChatWindow({ sessionId }: ChatWindowProps) {
     const [isLoading, setIsLoading] = useState(false);
     const [session, setSession] = useState<any>(null);
     const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set());
+    const [searchQuery, setSearchQuery] = useState('');
+    const [showSearch, setShowSearch] = useState(false);
+
+    // Filter messages based on search query
+    const filteredMessages = searchQuery.trim()
+        ? messages.filter(msg =>
+            msg.content?.toLowerCase().includes(searchQuery.toLowerCase())
+        )
+        : messages;
 
     useEffect(() => {
         if (sessionId && accessToken) {
@@ -96,7 +106,9 @@ export function ChatWindow({ sessionId }: ChatWindowProps) {
         setIsLoading(true);
         try {
             const data: any = await apiClient.getMessages(id, accessToken!);
-            setMessages(data.messages ? data.messages.reverse() : []);
+            // Backend returns array directly, already reversed (oldest first)
+            const messageList = Array.isArray(data) ? data : [];
+            setMessages(messageList);
         } catch (error) {
             console.error('Failed to load messages:', error);
         } finally {
@@ -169,6 +181,14 @@ export function ChatWindow({ sessionId }: ChatWindowProps) {
                     </div>
                 </div>
                 <div className="flex gap-1">
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-9 w-9 text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100"
+                        onClick={() => setShowSearch(!showSearch)}
+                    >
+                        <Search className="h-5 w-5" />
+                    </Button>
                     <Button variant="ghost" size="icon" className="h-9 w-9 text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100">
                         <Phone className="h-5 w-5" />
                     </Button>
@@ -180,6 +200,40 @@ export function ChatWindow({ sessionId }: ChatWindowProps) {
                     </Button>
                 </div>
             </div>
+
+            {/* Search Bar */}
+            {showSearch && (
+                <div className="px-6 py-3 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900">
+                    <div className="relative">
+                        <Search className="absolute left-3 top-2.5 h-4 w-4 text-zinc-400" />
+                        <Input
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            placeholder="Search messages in this chat..."
+                            className="pl-10 pr-10 bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 focus-visible:ring-indigo-500"
+                            autoFocus
+                        />
+                        {searchQuery && (
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className="absolute right-1 top-1 h-7 w-7"
+                                onClick={() => setSearchQuery('')}
+                            >
+                                <X className="h-4 w-4" />
+                            </Button>
+                        )}
+                    </div>
+                    {searchQuery && (
+                        <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-2">
+                            {filteredMessages.length === 0
+                                ? 'No messages found'
+                                : `Found ${filteredMessages.length} ${filteredMessages.length === 1 ? 'message' : 'messages'}`
+                            }
+                        </p>
+                    )}
+                </div>
+            )}
 
             {/* Typing Indicator */}
             {typingUsers.size > 0 && (
@@ -211,7 +265,7 @@ export function ChatWindow({ sessionId }: ChatWindowProps) {
                 </div>
             )}
 
-            <MessageList messages={messages} session={session} />
+            <MessageList messages={filteredMessages} session={session} searchQuery={searchQuery} />
             <MessageInput onSendMessage={handleSendMessage} onTyping={handleTyping} />
         </div>
     );
