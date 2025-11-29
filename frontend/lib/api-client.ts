@@ -61,6 +61,13 @@ class APIClient {
         });
     }
 
+    async googleLogin(token: string) {
+        return this.request('/auth/google', {
+            method: 'POST',
+            body: JSON.stringify({ token }),
+        });
+    }
+
     // User endpoints
     async getUsers(token: string) {
         return this.request<any[]>('/users', { token });

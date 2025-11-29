@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -7,6 +8,8 @@ import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
 import { Search, LogOut, Settings, Plus } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
+
+import { UserListDialog } from './user-list-dialog';
 
 export interface Session {
     id: string;
@@ -30,12 +33,14 @@ interface SidebarProps {
     sessions: Session[];
     selectedId: string | null;
     onSelect: (id: string) => void;
+    onSessionCreated: (session: any) => void;
     currentUserId?: string;
     className?: string;
 }
 
-export function Sidebar({ sessions, selectedId, onSelect, currentUserId, className }: SidebarProps) {
+export function Sidebar({ sessions, selectedId, onSelect, onSessionCreated, currentUserId, className }: SidebarProps) {
     const { user, logout } = useAuth();
+    const router = useRouter();
     const [searchQuery, setSearchQuery] = useState('');
 
     const filteredSessions = sessions.filter(session => {
@@ -54,6 +59,10 @@ export function Sidebar({ sessions, selectedId, onSelect, currentUserId, classNa
         );
     });
 
+    const handleLogout = () => {
+        logout(() => router.push('/auth/login'));
+    };
+
     return (
         <div className={cn("flex flex-col h-full bg-white dark:bg-zinc-900", className)}>
             {/* Header / User Profile */}
@@ -70,10 +79,15 @@ export function Sidebar({ sessions, selectedId, onSelect, currentUserId, classNa
                         </div>
                     </div>
                     <div className="flex gap-1">
+                        <UserListDialog onSessionCreated={onSessionCreated}>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100">
+                                <Plus className="h-4 w-4" />
+                            </Button>
+                        </UserListDialog>
                         <Button variant="ghost" size="icon" className="h-8 w-8 text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100">
                             <Settings className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="icon" onClick={logout} className="h-8 w-8 text-zinc-500 hover:text-red-600">
+                        <Button variant="ghost" size="icon" onClick={handleLogout} className="h-8 w-8 text-zinc-500 hover:text-red-600">
                             <LogOut className="h-4 w-4" />
                         </Button>
                     </div>

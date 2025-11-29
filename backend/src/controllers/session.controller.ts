@@ -112,6 +112,7 @@ export const createSession = async (req: AuthenticatedRequest, res: Response) =>
 export const getUserSessions = async (req: AuthenticatedRequest, res: Response) => {
     try {
         const userId = req.user?.userId;
+        // console.log('userId', userId);
         if (!userId) {
             return res.status(401).json({ message: 'Unauthorized' });
         }
@@ -157,6 +158,7 @@ export const getUserSessions = async (req: AuthenticatedRequest, res: Response) 
             },
         });
 
+        console.log('sessions', sessions);
         res.status(200).json(sessions);
     } catch (error) {
         console.error('Get user sessions error:', error);

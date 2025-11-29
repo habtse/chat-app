@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '../../lib/auth-context';
 import { apiClient } from '../../lib/api-client';
 import { Avatar, AvatarImage, AvatarFallback } from '../ui/avatar';
@@ -21,6 +22,7 @@ interface ChatSidebarProps {
 
 export function ChatSidebar({ currentSessionId, onSelectSession, onSelectUser }: ChatSidebarProps) {
     const { user, logout, accessToken } = useAuth();
+    const router = useRouter();
     const [sessions, setSessions] = useState<any[]>([]);
     const [users, setUsers] = useState<any[]>([]);
     const [categories, setCategories] = useState<any[]>([]);
@@ -30,6 +32,10 @@ export function ChatSidebar({ currentSessionId, onSelectSession, onSelectUser }:
     const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
     const [isSearchDialogOpen, setIsSearchDialogOpen] = useState(false);
     const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+
+    const handleLogout = () => {
+        logout(() => router.push('/auth/login'));
+    };
 
     useEffect(() => {
         if (accessToken) {
@@ -96,7 +102,7 @@ export function ChatSidebar({ currentSessionId, onSelectSession, onSelectUser }:
                             </div>
                         </div>
                     </div>
-                    <Button variant="ghost" size="icon" onClick={logout}>
+                    <Button variant="ghost" size="icon" onClick={handleLogout}>
                         <LogOut className="h-4 w-4 text-gray-500" />
                     </Button>
                 </div>

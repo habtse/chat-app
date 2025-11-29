@@ -8,14 +8,15 @@ import { wsClient } from '@/lib/websocket-client';
 import { useAuth } from '@/lib/auth-context';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { Loader2, Phone, Video, MoreVertical, Users, Search, X } from 'lucide-react';
+import { Loader2, Phone, Video, MoreVertical, Users, Search, X, ArrowLeft } from 'lucide-react';
 import { Input } from '../ui/input';
 
 interface ChatWindowProps {
     sessionId: string | null;
+    onBack?: () => void;
 }
 
-export function ChatWindow({ sessionId }: ChatWindowProps) {
+export function ChatWindow({ sessionId, onBack }: ChatWindowProps) {
     const { accessToken, user } = useAuth();
     const [messages, setMessages] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(false);
@@ -162,6 +163,16 @@ export function ChatWindow({ sessionId }: ChatWindowProps) {
             {/* Header */}
             <div className="px-6 py-4 border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 flex items-center justify-between">
                 <div className="flex items-center gap-3">
+                    {onBack && (
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="md:hidden mr-1 -ml-2 h-8 w-8"
+                            onClick={onBack}
+                        >
+                            <ArrowLeft className="h-5 w-5" />
+                        </Button>
+                    )}
                     <div className="relative">
                         <Avatar className="h-10 w-10 border border-zinc-200 dark:border-zinc-700">
                             <AvatarImage src={displayImage || undefined} />
