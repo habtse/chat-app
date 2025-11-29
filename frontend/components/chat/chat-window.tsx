@@ -40,9 +40,27 @@ export function ChatWindow({ sessionId }: ChatWindowProps) {
             }
         };
 
+        const handleStatusUpdate = (data: { userId: string; isOnline: boolean }) => {
+            setSession((prevSession: any) => {
+                if (!prevSession) return prevSession;
+                return {
+                    ...prevSession,
+                    members: prevSession.members?.map((m: any) => ({
+                        ...m,
+                        user: m.user.id === data.userId
+                            ? { ...m.user, isOnline: data.isOnline }
+                            : m.user
+                    }))
+                };
+            });
+        };
+
         wsClient.on('NEW_MESSAGE', handleNewMessage);
+        wsClient.on('USER_STATUS_UPDATE', handleStatusUpdate);
+
         return () => {
             wsClient.off('NEW_MESSAGE', handleNewMessage);
+            wsClient.off('USER_STATUS_UPDATE', handleStatusUpdate);
         };
     }, [sessionId]);
 
