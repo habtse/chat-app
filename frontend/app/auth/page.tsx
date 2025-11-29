@@ -7,22 +7,7 @@ import * as z from 'zod';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { Button } from '@/components/ui/button';
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardFooter,
-    CardHeader,
-    CardTitle,
-} from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import {
-    Tabs,
-    TabsContent,
-    TabsList,
-    TabsTrigger,
-} from '@/components/ui/tabs';
 import {
     Form,
     FormControl,
@@ -32,6 +17,7 @@ import {
     FormMessage,
 } from '@/components/ui/form';
 import { useToast } from '@/components/ui/use-toast';
+import { MessageSquare, Loader2, Mail, Lock, User } from 'lucide-react';
 
 const signInSchema = z.object({
     email: z.string().email({ message: 'Invalid email address' }),
@@ -53,6 +39,7 @@ export default function AuthPage() {
     const router = useRouter();
     const { toast } = useToast();
     const [isLoading, setIsLoading] = useState(false);
+    const [isSignUp, setIsSignUp] = useState(false);
 
     const signInForm = useForm<z.infer<typeof signInSchema>>({
         resolver: zodResolver(signInSchema),
@@ -113,128 +100,225 @@ export default function AuthPage() {
     }
 
     return (
-        <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4 py-12 dark:bg-gray-900 sm:px-6 lg:px-8">
-            <Card className="w-full max-w-md shadow-lg rounded-xl">
-                <CardHeader className="space-y-1 text-center">
-                    <CardTitle className="text-2xl font-bold tracking-tight">
-                        Welcome back
-                    </CardTitle>
-                    <CardDescription>
-                        Sign in to your account or create a new one
-                    </CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <Tabs defaultValue="signin" className="w-full">
-                        <TabsList className="grid w-full grid-cols-2 mb-8">
-                            <TabsTrigger value="signin">Sign In</TabsTrigger>
-                            <TabsTrigger value="signup">Sign Up</TabsTrigger>
-                        </TabsList>
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 p-4">
+            {/* Animated background blobs */}
+            <div className="absolute inset-0 overflow-hidden">
+                <div className="absolute -top-40 -right-40 w-80 h-80 bg-purple-400 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob"></div>
+                <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-indigo-400 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-2000"></div>
+                <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-pink-400 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-4000"></div>
+            </div>
 
-                        <TabsContent value="signin">
-                            <Form {...signInForm}>
-                                <form onSubmit={signInForm.handleSubmit(onSignIn)} className="space-y-4">
-                                    <FormField
-                                        control={signInForm.control}
-                                        name="email"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>Email</FormLabel>
-                                                <FormControl>
-                                                    <Input placeholder="name@example.com" {...field} />
-                                                </FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-                                    <FormField
-                                        control={signInForm.control}
-                                        name="password"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>Password</FormLabel>
-                                                <FormControl>
-                                                    <Input type="password" placeholder="••••••" {...field} />
-                                                </FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-                                    <div className="text-right">
-                                        <a href="#" className="text-sm text-primary hover:underline">
-                                            Forgot password?
-                                        </a>
-                                    </div>
-                                    <Button className="w-full" type="submit" disabled={isLoading}>
-                                        {isLoading ? 'Signing in...' : 'Sign In'}
-                                    </Button>
-                                </form>
-                            </Form>
-                        </TabsContent>
+            {/* Main card */}
+            <div className="relative w-full max-w-md">
+                <div className="bg-white/95 backdrop-blur-lg rounded-3xl shadow-2xl p-8 border border-white/20">
+                    {/* Logo and title */}
+                    <div className="text-center mb-8">
+                        <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-2xl mb-4 shadow-lg">
+                            <MessageSquare className="w-8 h-8 text-white" />
+                        </div>
+                        <h1 className="text-3xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent mb-2">
+                            {isSignUp ? 'Create Account' : 'Welcome Back'}
+                        </h1>
+                        <p className="text-gray-600">
+                            {isSignUp ? 'Join Shipper Chat today' : 'Sign in to continue to Shipper Chat'}
+                        </p>
+                    </div>
 
-                        <TabsContent value="signup">
-                            <Form {...signUpForm}>
-                                <form onSubmit={signUpForm.handleSubmit(onSignUp)} className="space-y-4">
-                                    <FormField
-                                        control={signUpForm.control}
-                                        name="name"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>Full Name</FormLabel>
-                                                <FormControl>
-                                                    <Input placeholder="John Doe" {...field} />
-                                                </FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-                                    <FormField
-                                        control={signUpForm.control}
-                                        name="email"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>Email</FormLabel>
-                                                <FormControl>
-                                                    <Input placeholder="name@example.com" {...field} />
-                                                </FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-                                    <FormField
-                                        control={signUpForm.control}
-                                        name="password"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>Password</FormLabel>
-                                                <FormControl>
-                                                    <Input type="password" placeholder="••••••" {...field} />
-                                                </FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-                                    <FormField
-                                        control={signUpForm.control}
-                                        name="confirmPassword"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>Confirm Password</FormLabel>
-                                                <FormControl>
-                                                    <Input type="password" placeholder="••••••" {...field} />
-                                                </FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-                                    <Button className="w-full" type="submit" disabled={isLoading}>
-                                        {isLoading ? 'Creating account...' : 'Create Account'}
-                                    </Button>
-                                </form>
-                            </Form>
-                        </TabsContent>
-                    </Tabs>
-                </CardContent>
-            </Card>
+                    {/* Toggle buttons */}
+                    <div className="flex gap-2 mb-6 p-1 bg-gray-100 rounded-xl">
+                        <button
+                            onClick={() => setIsSignUp(false)}
+                            className={`flex-1 py-2.5 rounded-lg font-semibold transition-all ${!isSignUp
+                                    ? 'bg-white text-indigo-600 shadow-md'
+                                    : 'text-gray-600 hover:text-gray-900'
+                                }`}
+                        >
+                            Sign In
+                        </button>
+                        <button
+                            onClick={() => setIsSignUp(true)}
+                            className={`flex-1 py-2.5 rounded-lg font-semibold transition-all ${isSignUp
+                                    ? 'bg-white text-indigo-600 shadow-md'
+                                    : 'text-gray-600 hover:text-gray-900'
+                                }`}
+                        >
+                            Sign Up
+                        </button>
+                    </div>
+
+                    {/* Sign In Form */}
+                    {!isSignUp && (
+                        <Form {...signInForm}>
+                            <form onSubmit={signInForm.handleSubmit(onSignIn)} className="space-y-4">
+                                <FormField
+                                    control={signInForm.control}
+                                    name="email"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel className="text-gray-700 font-medium">Email</FormLabel>
+                                            <FormControl>
+                                                <div className="relative">
+                                                    <Mail className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+                                                    <Input
+                                                        placeholder="name@example.com"
+                                                        {...field}
+                                                        className="pl-10 h-12 border-gray-200 focus:border-indigo-500 focus:ring-indigo-500"
+                                                    />
+                                                </div>
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={signInForm.control}
+                                    name="password"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel className="text-gray-700 font-medium">Password</FormLabel>
+                                            <FormControl>
+                                                <div className="relative">
+                                                    <Lock className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+                                                    <Input
+                                                        type="password"
+                                                        placeholder="••••••"
+                                                        {...field}
+                                                        className="pl-10 h-12 border-gray-200 focus:border-indigo-500 focus:ring-indigo-500"
+                                                    />
+                                                </div>
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                                <Button
+                                    className="w-full h-12 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold rounded-xl shadow-lg shadow-indigo-500/50 transition-all"
+                                    type="submit"
+                                    disabled={isLoading}
+                                >
+                                    {isLoading ? (
+                                        <>
+                                            <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                                            Signing in...
+                                        </>
+                                    ) : (
+                                        'Sign In'
+                                    )}
+                                </Button>
+                            </form>
+                        </Form>
+                    )}
+
+                    {/* Sign Up Form */}
+                    {isSignUp && (
+                        <Form {...signUpForm}>
+                            <form onSubmit={signUpForm.handleSubmit(onSignUp)} className="space-y-4">
+                                <FormField
+                                    control={signUpForm.control}
+                                    name="name"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel className="text-gray-700 font-medium">Full Name</FormLabel>
+                                            <FormControl>
+                                                <div className="relative">
+                                                    <User className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+                                                    <Input
+                                                        placeholder="John Doe"
+                                                        {...field}
+                                                        className="pl-10 h-12 border-gray-200 focus:border-indigo-500 focus:ring-indigo-500"
+                                                    />
+                                                </div>
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={signUpForm.control}
+                                    name="email"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel className="text-gray-700 font-medium">Email</FormLabel>
+                                            <FormControl>
+                                                <div className="relative">
+                                                    <Mail className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+                                                    <Input
+                                                        placeholder="name@example.com"
+                                                        {...field}
+                                                        className="pl-10 h-12 border-gray-200 focus:border-indigo-500 focus:ring-indigo-500"
+                                                    />
+                                                </div>
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={signUpForm.control}
+                                    name="password"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel className="text-gray-700 font-medium">Password</FormLabel>
+                                            <FormControl>
+                                                <div className="relative">
+                                                    <Lock className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+                                                    <Input
+                                                        type="password"
+                                                        placeholder="••••••"
+                                                        {...field}
+                                                        className="pl-10 h-12 border-gray-200 focus:border-indigo-500 focus:ring-indigo-500"
+                                                    />
+                                                </div>
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={signUpForm.control}
+                                    name="confirmPassword"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel className="text-gray-700 font-medium">Confirm Password</FormLabel>
+                                            <FormControl>
+                                                <div className="relative">
+                                                    <Lock className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+                                                    <Input
+                                                        type="password"
+                                                        placeholder="••••••"
+                                                        {...field}
+                                                        className="pl-10 h-12 border-gray-200 focus:border-indigo-500 focus:ring-indigo-500"
+                                                    />
+                                                </div>
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                                <Button
+                                    className="w-full h-12 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold rounded-xl shadow-lg shadow-indigo-500/50 transition-all"
+                                    type="submit"
+                                    disabled={isLoading}
+                                >
+                                    {isLoading ? (
+                                        <>
+                                            <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                                            Creating account...
+                                        </>
+                                    ) : (
+                                        'Create Account'
+                                    )}
+                                </Button>
+                            </form>
+                        </Form>
+                    )}
+
+                    {/* Footer */}
+                    <div className="mt-6 text-center text-sm text-gray-500">
+                        <p>Test credentials: john@example.com / password123</p>
+                    </div>
+                </div>
+            </div>
         </div>
     );
 }

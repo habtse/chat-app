@@ -17,7 +17,7 @@ class APIClient {
     ): Promise<T> {
         const { token, ...fetchOptions } = options;
 
-        const headers: HeadersInit = {
+        const headers: any = {
             'Content-Type': 'application/json',
             ...fetchOptions.headers,
         };
@@ -173,7 +173,7 @@ class APIClient {
     }
 
     async createAIChatSession(token: string) {
-        return this.request('/ai/session', {
+        return this.request<any>('/ai/session', {
             method: 'POST',
             token,
         });
