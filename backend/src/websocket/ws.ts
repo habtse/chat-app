@@ -274,11 +274,18 @@ function broadcastMessage(sessionId: string, message: any) {
   const messageToSend = JSON.stringify({
     type: 'NEW_MESSAGE',
     payload: {
+      id: message.id,
       messageId: message.id,
       sessionId: message.chatSessionId,
       senderId: message.senderId,
       content: message.content,
       createdAt: message.createdAt,
+      isRead: false,
+      sender: {
+        id: message.senderId,
+        name: message.sender.name,
+        profilePicUrl: message.sender.profilePicUrl,
+      },
       senderName: message.sender.name,
     },
   });
