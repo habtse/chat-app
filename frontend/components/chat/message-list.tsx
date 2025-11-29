@@ -21,9 +21,10 @@ interface Message {
 
 interface MessageListProps {
     messages: Message[];
+    session?: any;
 }
 
-export function MessageList({ messages }: MessageListProps) {
+export function MessageList({ messages, session }: MessageListProps) {
     const { user } = useAuth();
     const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -55,8 +56,8 @@ export function MessageList({ messages }: MessageListProps) {
                             <div className={cn("flex items-end max-w-[75%] gap-2", isMe ? 'flex-row-reverse' : 'flex-row')}>
                                 {!isMe && (
                                     <Avatar className="h-8 w-8 mb-1 flex-shrink-0">
-                                        <AvatarImage src={message.sender.profilePicUrl || undefined} />
-                                        <AvatarFallback className="text-xs">{message.sender.name[0]}</AvatarFallback>
+                                        <AvatarImage src={message.sender?.profilePicUrl || undefined} />
+                                        <AvatarFallback className="text-xs">{message.sender?.name?.[0] || '?'}</AvatarFallback>
                                     </Avatar>
                                 )}
 
@@ -68,7 +69,7 @@ export function MessageList({ messages }: MessageListProps) {
                                             : 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 rounded-bl-md border border-zinc-200 dark:border-zinc-700'
                                     )}
                                 >
-                                    {!isMe && (
+                                    {!isMe && message.sender?.name && (
                                         <p className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 mb-1">
                                             {message.sender.name}
                                         </p>

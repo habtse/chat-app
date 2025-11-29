@@ -13,6 +13,7 @@ interface MessageInputProps {
 export function MessageInput({ onSendMessage, onTyping }: MessageInputProps) {
     const [content, setContent] = useState('');
     const textareaRef = useRef<HTMLTextAreaElement>(null);
+    const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
         if (e.key === 'Enter' && !e.shiftKey) {
@@ -26,12 +27,30 @@ export function MessageInput({ onSendMessage, onTyping }: MessageInputProps) {
             onSendMessage(content);
             setContent('');
             if (onTyping) onTyping(false);
+            if (typingTimeoutRef.current) {
+                clearTimeout(typingTimeoutRef.current);
+                typingTimeoutRef.current = null;
+            }
         }
     };
 
     const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
         setContent(e.target.value);
-        if (onTyping) onTyping(true);
+
+        if (onTyping) {
+            // Send typing start
+            onTyping(true);
+
+            // Clear existing timeout
+            if (typingTimeoutRef.current) {
+                clearTimeout(typingTimeoutRef.current);
+            }
+
+            // Set new timeout to stop typing after 2 seconds of inactivity
+            typingTimeoutRef.current = setTimeout(() => {
+                onTyping(false);
+            }, 2000);
+        }
     };
 
     // Auto-resize

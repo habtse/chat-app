@@ -19,6 +19,7 @@ export function ChatWindow({ sessionId }: ChatWindowProps) {
     const [messages, setMessages] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [session, setSession] = useState<any>(null);
+    const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set());
 
     useEffect(() => {
         if (sessionId && accessToken) {
@@ -34,9 +35,11 @@ export function ChatWindow({ sessionId }: ChatWindowProps) {
     }, [sessionId, accessToken]);
 
     useEffect(() => {
-        const handleNewMessage = (message: any) => {
-            if (message.sessionId === sessionId) {
-                setMessages((prev) => [...prev, message]);
+        const handleNewMessage = (payload: any) => {
+            // WebSocket sends the payload directly, not wrapped in message.payload
+            console.log('NEW_MESSAGE received:', payload);
+            if (payload.sessionId === sessionId) {
+                setMessages((prev) => [...prev, payload]);
             }
         };
 
@@ -55,14 +58,30 @@ export function ChatWindow({ sessionId }: ChatWindowProps) {
             });
         };
 
+        const handleTypingIndicator = (data: { sessionId: string; userId: string; isTyping: boolean }) => {
+            if (data.sessionId === sessionId && data.userId !== user?.id) {
+                setTypingUsers((prev) => {
+                    const newSet = new Set(prev);
+                    if (data.isTyping) {
+                        newSet.add(data.userId);
+                    } else {
+                        newSet.delete(data.userId);
+                    }
+                    return newSet;
+                });
+            }
+        };
+
         wsClient.on('NEW_MESSAGE', handleNewMessage);
         wsClient.on('USER_STATUS_UPDATE', handleStatusUpdate);
+        wsClient.on('TYPING_INDICATOR', handleTypingIndicator);
 
         return () => {
             wsClient.off('NEW_MESSAGE', handleNewMessage);
             wsClient.off('USER_STATUS_UPDATE', handleStatusUpdate);
+            wsClient.off('TYPING_INDICATOR', handleTypingIndicator);
         };
-    }, [sessionId]);
+    }, [sessionId, user?.id]);
 
     const loadSession = async (id: string) => {
         try {
@@ -161,7 +180,38 @@ export function ChatWindow({ sessionId }: ChatWindowProps) {
                     </Button>
                 </div>
             </div>
-            <MessageList messages={messages} />
+
+            {/* Typing Indicator */}
+            {typingUsers.size > 0 && (
+                <div className="px-6 py-2 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900">
+                    <div className="flex items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400">
+                        <div className="flex gap-1">
+                            <span className="w-1.5 h-1.5 bg-zinc-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
+                            <span className="w-1.5 h-1.5 bg-zinc-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
+                            <span className="w-1.5 h-1.5 bg-zinc-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
+                        </div>
+                        <span>
+                            {(() => {
+                                const typingUserNames = Array.from(typingUsers)
+                                    .map(userId => {
+                                        const member = session?.members?.find((m: any) => m.userId === userId);
+                                        return member?.user?.name || 'Someone';
+                                    });
+
+                                if (typingUserNames.length === 1) {
+                                    return `${typingUserNames[0]} is typing...`;
+                                } else if (typingUserNames.length === 2) {
+                                    return `${typingUserNames[0]} and ${typingUserNames[1]} are typing...`;
+                                } else {
+                                    return `${typingUserNames[0]} and ${typingUserNames.length - 1} others are typing...`;
+                                }
+                            })()}
+                        </span>
+                    </div>
+                </div>
+            )}
+
+            <MessageList messages={messages} session={session} />
             <MessageInput onSendMessage={handleSendMessage} onTyping={handleTyping} />
         </div>
     );
