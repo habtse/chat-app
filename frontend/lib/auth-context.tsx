@@ -1,8 +1,8 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { apiClient } from '../api-client';
-import { wsClient } from '../websocket-client';
+import { apiClient } from './api-client';
+import { wsClient } from './websocket-client';
 
 interface User {
     id: string;

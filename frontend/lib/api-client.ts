@@ -63,7 +63,7 @@ class APIClient {
 
     // User endpoints
     async getUsers(token: string) {
-        return this.request('/users', { token });
+        return this.request<any[]>('/users', { token });
     }
 
     async getCurrentUser(token: string) {
@@ -84,7 +84,7 @@ class APIClient {
 
     // Session endpoints
     async getSessions(token: string) {
-        return this.request('/sessions', { token });
+        return this.request<any[]>('/sessions', { token });
     }
 
     async getSession(sessionId: string, token: string) {
@@ -141,7 +141,7 @@ class APIClient {
 
     // Category endpoints
     async getCategories(token: string) {
-        return this.request('/categories', { token });
+        return this.request<any[]>('/categories', { token });
     }
 
     async createCategory(name: string, token: string) {

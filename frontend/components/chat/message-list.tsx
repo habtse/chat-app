@@ -5,6 +5,7 @@ import { useAuth } from '../../lib/auth-context';
 import { Avatar, AvatarImage, AvatarFallback } from '../ui/avatar';
 import { ScrollArea } from '../ui/scroll-area';
 import { Check, CheckCheck } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface Message {
     id: string;
@@ -41,44 +42,51 @@ export function MessageList({ messages }: MessageListProps) {
     };
 
     return (
-        <ScrollArea ref={scrollRef} className="flex-1 p-4">
-            <div className="space-y-4">
+        <ScrollArea ref={scrollRef} className="flex-1 bg-zinc-50/50 dark:bg-zinc-950/50">
+            <div className="p-6 space-y-6">
                 {messages.map((message) => {
                     const isMe = message.senderId === user?.id;
 
                     return (
                         <div
                             key={message.id}
-                            className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}
+                            className={cn("flex", isMe ? 'justify-end' : 'justify-start')}
                         >
-                            <div className={`flex items-end max-w-[70%] ${isMe ? 'flex-row-reverse space-x-reverse' : 'flex-row'} space-x-2`}>
+                            <div className={cn("flex items-end max-w-[75%] gap-2", isMe ? 'flex-row-reverse' : 'flex-row')}>
                                 {!isMe && (
-                                    <Avatar className="h-8 w-8 mb-1">
+                                    <Avatar className="h-8 w-8 mb-1 flex-shrink-0">
                                         <AvatarImage src={message.sender.profilePicUrl || undefined} />
-                                        <AvatarFallback>{message.sender.name[0]}</AvatarFallback>
+                                        <AvatarFallback className="text-xs">{message.sender.name[0]}</AvatarFallback>
                                     </Avatar>
                                 )}
 
                                 <div
-                                    className={`rounded-2xl px-4 py-2 shadow-sm ${isMe
-                                            ? 'bg-indigo-600 text-white rounded-br-none'
-                                            : 'bg-white text-gray-900 rounded-bl-none border'
-                                        }`}
+                                    className={cn(
+                                        "rounded-2xl px-4 py-2.5 shadow-sm",
+                                        isMe
+                                            ? 'bg-gradient-to-br from-indigo-600 to-indigo-700 text-white rounded-br-md'
+                                            : 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 rounded-bl-md border border-zinc-200 dark:border-zinc-700'
+                                    )}
                                 >
                                     {!isMe && (
-                                        <p className="text-xs font-semibold text-gray-500 mb-1 ml-1">
+                                        <p className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 mb-1">
                                             {message.sender.name}
                                         </p>
                                     )}
-                                    <p className="text-sm whitespace-pre-wrap break-words">{message.content}</p>
-                                    <div className={`flex items-center justify-end space-x-1 mt-1 ${isMe ? 'text-indigo-200' : 'text-gray-400'}`}>
-                                        <span className="text-[10px]">{formatTime(message.createdAt)}</span>
+                                    <p className="text-[15px] leading-relaxed whitespace-pre-wrap break-words">
+                                        {message.content}
+                                    </p>
+                                    <div className={cn(
+                                        "flex items-center justify-end gap-1 mt-1.5",
+                                        isMe ? 'text-indigo-200' : 'text-zinc-400 dark:text-zinc-500'
+                                    )}>
+                                        <span className="text-[10px] font-medium">{formatTime(message.createdAt)}</span>
                                         {isMe && (
                                             <span>
                                                 {message.isRead ? (
-                                                    <CheckCheck className="h-3 w-3" />
+                                                    <CheckCheck className="h-3.5 w-3.5" />
                                                 ) : (
-                                                    <Check className="h-3 w-3" />
+                                                    <Check className="h-3.5 w-3.5" />
                                                 )}
                                             </span>
                                         )}

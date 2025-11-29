@@ -1,50 +1,31 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
-import { useAuth } from '../../lib/auth-context';
-import { apiClient } from '../../lib/api-client';
-import { wsClient } from '../../lib/websocket-client';
+import React, { useEffect, useState } from 'react';
 import { MessageList } from './message-list';
 import { MessageInput } from './message-input';
-import { Avatar, AvatarImage, AvatarFallback } from '../ui/avatar';
-import { Button } from '../ui/button';
-import { MoreVertical, Users, Tag } from 'lucide-react';
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuLabel,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger,
-    DropdownMenuSub,
-    DropdownMenuSubTrigger,
-    DropdownMenuSubContent,
-    DropdownMenuRadioGroup,
-    DropdownMenuRadioItem,
-} from "../ui/dropdown-menu"
+import { apiClient } from '@/lib/api-client';
+import { wsClient } from '@/lib/websocket-client';
+import { useAuth } from '@/lib/auth-context';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
+import { Loader2, Phone, Video, MoreVertical, Users } from 'lucide-react';
 
 interface ChatWindowProps {
-    sessionId: string;
+    sessionId: string | null;
 }
 
 export function ChatWindow({ sessionId }: ChatWindowProps) {
-    const { user, accessToken } = useAuth();
-    const [session, setSession] = useState<any>(null);
+    const { accessToken, user } = useAuth();
     const [messages, setMessages] = useState<any[]>([]);
-    const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set());
     const [isLoading, setIsLoading] = useState(false);
-    const [categories, setCategories] = useState<any[]>([]);
+    const [session, setSession] = useState<any>(null);
 
     useEffect(() => {
         if (sessionId && accessToken) {
-            loadSessionData();
-            loadCategories();
+            loadMessages(sessionId);
+            loadSession(sessionId);
             wsClient.joinSession(sessionId);
-
-            // Mark messages as read
-            apiClient.markSessionMessagesAsRead(sessionId, accessToken);
         }
-
         return () => {
             if (sessionId) {
                 wsClient.leaveSession(sessionId);
@@ -53,105 +34,60 @@ export function ChatWindow({ sessionId }: ChatWindowProps) {
     }, [sessionId, accessToken]);
 
     useEffect(() => {
-        // WebSocket event listeners
         const handleNewMessage = (message: any) => {
-            if (message.chatSessionId === sessionId) {
+            if (message.sessionId === sessionId) {
                 setMessages((prev) => [...prev, message]);
-
-                // Mark as read if we are viewing this session
-                if (accessToken) {
-                    apiClient.markMessageAsRead(message.id, accessToken);
-                }
             }
-        };
-
-        const handleTyping = (data: any) => {
-            if (data.sessionId === sessionId && data.userId !== user?.id) {
-                setTypingUsers((prev) => {
-                    const newSet = new Set(prev);
-                    if (data.isTyping) {
-                        newSet.add(data.userId);
-                    } else {
-                        newSet.delete(data.userId);
-                    }
-                    return newSet;
-                });
-            }
-        };
-
-        const handleRead = (data: any) => {
-            // Update message read status in UI
-            setMessages((prev) =>
-                prev.map(msg =>
-                    msg.id === data.messageId ? { ...msg, isRead: true } : msg
-                )
-            );
         };
 
         wsClient.on('NEW_MESSAGE', handleNewMessage);
-        wsClient.on('TYPING_INDICATOR', handleTyping);
-        wsClient.on('MARK_READ', handleRead); // Assuming backend broadcasts this
-
         return () => {
             wsClient.off('NEW_MESSAGE', handleNewMessage);
-            wsClient.off('TYPING_INDICATOR', handleTyping);
-            wsClient.off('MARK_READ', handleRead);
         };
-    }, [sessionId, user?.id, accessToken]);
+    }, [sessionId]);
 
-    const loadSessionData = async () => {
-        if (!accessToken) return;
+    const loadSession = async (id: string) => {
+        try {
+            const data = await apiClient.getSession(id, accessToken!);
+            setSession(data);
+        } catch (error) {
+            console.error('Failed to load session:', error);
+        }
+    };
+
+    const loadMessages = async (id: string) => {
         setIsLoading(true);
         try {
-            const [sessionData, messagesData] = await Promise.all([
-                apiClient.getSession(sessionId, accessToken),
-                apiClient.getMessages(sessionId, accessToken),
-            ]);
-            setSession(sessionData);
-            setMessages(messagesData.reverse()); // API returns newest first usually, we want oldest first for chat
+            const data: any = await apiClient.getMessages(id, accessToken!);
+            setMessages(data.messages ? data.messages.reverse() : []);
         } catch (error) {
-            console.error('Failed to load chat data:', error);
+            console.error('Failed to load messages:', error);
         } finally {
             setIsLoading(false);
         }
     };
 
-    const loadCategories = async () => {
-        if (!accessToken) return;
-        try {
-            const cats = await apiClient.getCategories(accessToken);
-            setCategories(cats);
-        } catch (error) {
-            console.error('Failed to load categories:', error);
-        }
-    };
-
-    const handleAssignCategory = async (categoryId: string) => {
-        if (!accessToken) return;
-        try {
-            await apiClient.assignCategoryToSession(categoryId, sessionId, accessToken);
-            // Update local session state
-            setSession((prev: any) => ({ ...prev, categoryId }));
-        } catch (error) {
-            console.error('Failed to assign category:', error);
-        }
-    };
-
     const handleSendMessage = async (content: string) => {
-        if (!accessToken) return;
-        try {
-            // Optimistic update could be done here, but let's wait for WS echo for simplicity and consistency
-            wsClient.sendMessage(sessionId, content);
-        } catch (error) {
-            console.error('Failed to send message:', error);
+        if (!sessionId || !accessToken) return;
+        wsClient.sendMessage(sessionId, content);
+    };
+
+    const handleTyping = (typing: boolean) => {
+        if (!sessionId) return;
+        if (typing) {
+            wsClient.startTyping(sessionId);
+        } else {
+            wsClient.stopTyping(sessionId);
         }
     };
 
     if (!sessionId) {
         return (
-            <div className="flex-1 flex items-center justify-center bg-gray-50">
-                <div className="text-center text-gray-500">
-                    <p>Select a chat to start messaging</p>
+            <div className="flex flex-1 items-center justify-center text-zinc-500 dark:text-zinc-400 bg-zinc-50/50 dark:bg-zinc-900/50">
+                <div className="text-center">
+                    <div className="mb-4 text-6xl">💬</div>
+                    <h3 className="text-lg font-semibold mb-1">Select a conversation</h3>
+                    <p className="text-sm">Choose a chat from the sidebar to start messaging</p>
                 </div>
             </div>
         );
@@ -159,80 +95,56 @@ export function ChatWindow({ sessionId }: ChatWindowProps) {
 
     if (isLoading) {
         return (
-            <div className="flex-1 flex items-center justify-center bg-white">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+            <div className="flex flex-1 items-center justify-center bg-zinc-50/50 dark:bg-zinc-900/50">
+                <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
             </div>
         );
     }
 
-    const otherMember = session?.isGroup
-        ? null
-        : session?.members.find((m: any) => m.userId !== user?.id)?.user;
-
-    const displayName = session?.isGroup ? session?.name : otherMember?.name;
-    const displayImage = session?.isGroup ? null : otherMember?.profilePicUrl;
+    // Determine display info for header
+    const otherMembers = session?.members?.filter((m: any) => m.userId !== user?.id) || [];
+    const displayMember = otherMembers[0]?.user;
+    const displayName = session?.isGroup ? session?.name : displayMember?.name || 'Chat';
+    const displayImage = session?.isGroup ? undefined : displayMember?.profilePicUrl;
+    const isOnline = displayMember?.isOnline;
 
     return (
-        <div className="flex-1 flex flex-col h-full bg-white">
+        <div className="flex flex-col h-full bg-white dark:bg-zinc-900">
             {/* Header */}
-            <div className="p-4 border-b flex justify-between items-center bg-white shadow-sm z-10">
-                <div className="flex items-center space-x-3">
-                    <Avatar>
-                        <AvatarImage src={displayImage || undefined} />
-                        <AvatarFallback>
-                            {session?.isGroup ? <Users className="h-4 w-4" /> : displayName?.[0]}
-                        </AvatarFallback>
-                    </Avatar>
-                    <div>
-                        <h2 className="font-semibold text-gray-900">{displayName}</h2>
-                        {session?.isGroup ? (
-                            <p className="text-xs text-gray-500">{session.members.length} members</p>
-                        ) : (
-                            otherMember?.isOnline && <p className="text-xs text-green-600">Online</p>
+            <div className="px-6 py-4 border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                    <div className="relative">
+                        <Avatar className="h-10 w-10 border border-zinc-200 dark:border-zinc-700">
+                            <AvatarImage src={displayImage || undefined} />
+                            <AvatarFallback>
+                                {session?.isGroup ? <Users className="h-5 w-5" /> : displayName?.[0]}
+                            </AvatarFallback>
+                        </Avatar>
+                        {isOnline && !session?.isGroup && (
+                            <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-green-500 border-2 border-white dark:border-zinc-900" />
                         )}
                     </div>
+                    <div>
+                        <h3 className="font-semibold text-zinc-900 dark:text-zinc-100">{displayName}</h3>
+                        <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                            {session?.isGroup ? `${otherMembers.length + 1} members` : isOnline ? 'Online' : 'Offline'}
+                        </p>
+                    </div>
                 </div>
-
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                            <MoreVertical className="h-5 w-5 text-gray-500" />
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                        <DropdownMenuLabel>Chat Options</DropdownMenuLabel>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuSub>
-                            <DropdownMenuSubTrigger>
-                                <Tag className="mr-2 h-4 w-4" />
-                                <span>Category</span>
-                            </DropdownMenuSubTrigger>
-                            <DropdownMenuSubContent>
-                                <DropdownMenuRadioGroup value={session?.categoryId} onValueChange={handleAssignCategory}>
-                                    {categories.map((cat) => (
-                                        <DropdownMenuRadioItem key={cat.id} value={cat.id}>
-                                            {cat.name}
-                                        </DropdownMenuRadioItem>
-                                    ))}
-                                </DropdownMenuRadioGroup>
-                            </DropdownMenuSubContent>
-                        </DropdownMenuSub>
-                    </DropdownMenuContent>
-                </DropdownMenu>
+                <div className="flex gap-1">
+                    <Button variant="ghost" size="icon" className="h-9 w-9 text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100">
+                        <Phone className="h-5 w-5" />
+                    </Button>
+                    <Button variant="ghost" size="icon" className="h-9 w-9 text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100">
+                        <Video className="h-5 w-5" />
+                    </Button>
+                    <Button variant="ghost" size="icon" className="h-9 w-9 text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100">
+                        <MoreVertical className="h-5 w-5" />
+                    </Button>
+                </div>
             </div>
-
-            {/* Messages */}
             <MessageList messages={messages} />
-
-            {/* Typing Indicator */}
-            {typingUsers.size > 0 && (
-                <div className="px-4 py-2 text-xs text-gray-500 italic">
-                    {typingUsers.size === 1 ? 'Someone is typing...' : 'Multiple people are typing...'}
-                </div>
-            )}
-
-            {/* Input */}
-            <MessageInput sessionId={sessionId} onSendMessage={handleSendMessage} />
+            <MessageInput onSendMessage={handleSendMessage} onTyping={handleTyping} />
         </div>
     );
 }
