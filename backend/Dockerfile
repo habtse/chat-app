@@ -31,7 +31,9 @@ COPY --from=builder /app/node_modules ./node_modules
 
 # Copy built output and Prisma client
 COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/src ./src
 COPY --from=builder /app/prisma ./prisma
+
 
 # Do NOT copy local .env into the image. Provide env vars at runtime (Fly secrets, etc.)
 
