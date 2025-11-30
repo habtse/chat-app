@@ -15,12 +15,16 @@ COPY ./frontend .
 RUN npm run build
 
 # Stage 2: Run the application
-FROM node:20-alpine AS runner
+FROM node:20-bullseye-slim AS runner
 
 WORKDIR /app
 
 # Set environment variables
-ENV NODE_ENV production
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+
+# Install minimal OS deps to ensure certificates and runtime libs
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates && rm -rf /var/lib/apt/lists/*
 
 # Copy necessary files from the builder stage
 COPY --from=builder /app/public ./public
@@ -28,8 +32,8 @@ COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./package.json
 
-# Expose the port
+# Expose the port (use PORT env at runtime)
 EXPOSE 3000
 
-# Run the application
-CMD ["npm", "start"]
+# Start next on 0.0.0.0 and respect $PORT (fallback to 3000)
+CMD ["sh", "-c", "exec npx next start -p ${PORT:-3000} -H 0.0.0.0"]
