@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { formatDistanceToNow } from 'date-fns';
 import { MessageList } from './message-list';
 import { MessageInput } from './message-input';
 import { apiClient } from '@/lib/api-client';
@@ -8,17 +9,30 @@ import { wsClient } from '@/lib/websocket-client';
 import { useAuth } from '@/lib/auth-context';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { Loader2, Phone, Video, MoreVertical, Users } from 'lucide-react';
+import { Loader2, Phone, Video, MoreVertical, Users, Search, X, ArrowLeft } from 'lucide-react';
+import { Input } from '../ui/input';
+import { GroupDetailsDialog } from './group-details-dialog';
 
 interface ChatWindowProps {
     sessionId: string | null;
+    onBack?: () => void;
 }
 
-export function ChatWindow({ sessionId }: ChatWindowProps) {
+export function ChatWindow({ sessionId, onBack }: ChatWindowProps) {
     const { accessToken, user } = useAuth();
     const [messages, setMessages] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [session, setSession] = useState<any>(null);
+    const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set());
+    const [searchQuery, setSearchQuery] = useState('');
+    const [showSearch, setShowSearch] = useState(false);
+
+    // Filter messages based on search query
+    const filteredMessages = searchQuery.trim()
+        ? messages.filter(msg =>
+            msg.content?.toLowerCase().includes(searchQuery.toLowerCase())
+        )
+        : messages;
 
     useEffect(() => {
         if (sessionId && accessToken) {
@@ -34,9 +48,11 @@ export function ChatWindow({ sessionId }: ChatWindowProps) {
     }, [sessionId, accessToken]);
 
     useEffect(() => {
-        const handleNewMessage = (message: any) => {
-            if (message.sessionId === sessionId) {
-                setMessages((prev) => [...prev, message]);
+        const handleNewMessage = (payload: any) => {
+            // WebSocket sends the payload directly, not wrapped in message.payload
+            console.log('NEW_MESSAGE received:', payload);
+            if (payload.sessionId === sessionId) {
+                setMessages((prev) => [...prev, payload]);
             }
         };
 
@@ -55,14 +71,30 @@ export function ChatWindow({ sessionId }: ChatWindowProps) {
             });
         };
 
+        const handleTypingIndicator = (data: { sessionId: string; userId: string; isTyping: boolean }) => {
+            if (data.sessionId === sessionId && data.userId !== user?.id) {
+                setTypingUsers((prev) => {
+                    const newSet = new Set(prev);
+                    if (data.isTyping) {
+                        newSet.add(data.userId);
+                    } else {
+                        newSet.delete(data.userId);
+                    }
+                    return newSet;
+                });
+            }
+        };
+
         wsClient.on('NEW_MESSAGE', handleNewMessage);
         wsClient.on('USER_STATUS_UPDATE', handleStatusUpdate);
+        wsClient.on('TYPING_INDICATOR', handleTypingIndicator);
 
         return () => {
             wsClient.off('NEW_MESSAGE', handleNewMessage);
             wsClient.off('USER_STATUS_UPDATE', handleStatusUpdate);
+            wsClient.off('TYPING_INDICATOR', handleTypingIndicator);
         };
-    }, [sessionId]);
+    }, [sessionId, user?.id]);
 
     const loadSession = async (id: string) => {
         try {
@@ -77,7 +109,9 @@ export function ChatWindow({ sessionId }: ChatWindowProps) {
         setIsLoading(true);
         try {
             const data: any = await apiClient.getMessages(id, accessToken!);
-            setMessages(data.messages ? data.messages.reverse() : []);
+            // Backend returns array directly, already reversed (oldest first)
+            const messageList = Array.isArray(data) ? data : [];
+            setMessages(messageList);
         } catch (error) {
             console.error('Failed to load messages:', error);
         } finally {
@@ -125,31 +159,63 @@ export function ChatWindow({ sessionId }: ChatWindowProps) {
     const displayName = session?.isGroup ? session?.name : displayMember?.name || 'Chat';
     const displayImage = session?.isGroup ? undefined : displayMember?.profilePicUrl;
     const isOnline = displayMember?.isOnline;
+    const lastActive = displayMember?.lastActive;
 
     return (
         <div className="flex flex-col h-full bg-white dark:bg-zinc-900">
+
             {/* Header */}
             <div className="px-6 py-4 border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                    <div className="relative">
-                        <Avatar className="h-10 w-10 border border-zinc-200 dark:border-zinc-700">
-                            <AvatarImage src={displayImage || undefined} />
-                            <AvatarFallback>
-                                {session?.isGroup ? <Users className="h-5 w-5" /> : displayName?.[0]}
-                            </AvatarFallback>
-                        </Avatar>
-                        {isOnline && !session?.isGroup && (
-                            <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-green-500 border-2 border-white dark:border-zinc-900" />
-                        )}
-                    </div>
-                    <div>
-                        <h3 className="font-semibold text-zinc-900 dark:text-zinc-100">{displayName}</h3>
-                        <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                            {session?.isGroup ? `${otherMembers.length + 1} members` : isOnline ? 'Online' : 'Offline'}
-                        </p>
-                    </div>
+                    {onBack && (
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="md:hidden mr-1 -ml-2 h-8 w-8"
+                            onClick={onBack}
+                        >
+                            <ArrowLeft className="h-5 w-5" />
+                        </Button>
+                    )}
+
+                    <GroupDetailsDialog session={session}>
+                        <div className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity">
+                            <div className="relative">
+                                <Avatar className="h-10 w-10 border border-zinc-200 dark:border-zinc-700">
+                                    <AvatarImage src={displayImage || undefined} />
+                                    <AvatarFallback>
+                                        {session?.isGroup ? <Users className="h-5 w-5" /> : displayName?.[0]}
+                                    </AvatarFallback>
+                                </Avatar>
+                                {isOnline && !session?.isGroup && (
+                                    <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-green-500 border-2 border-white dark:border-zinc-900" />
+                                )}
+                            </div>
+                            <div>
+                                <h3 className="font-semibold text-zinc-900 dark:text-zinc-100">{displayName}</h3>
+                                <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                                    {session?.isGroup
+                                        ? `${otherMembers.length + 1} members`
+                                        : isOnline
+                                            ? 'Online'
+                                            : lastActive
+                                                ? `Last seen ${formatDistanceToNow(new Date(lastActive), { addSuffix: true })}`
+                                                : 'Offline'
+                                    }
+                                </p>
+                            </div>
+                        </div>
+                    </GroupDetailsDialog>
                 </div>
                 <div className="flex gap-1">
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-9 w-9 text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100"
+                        onClick={() => setShowSearch(!showSearch)}
+                    >
+                        <Search className="h-5 w-5" />
+                    </Button>
                     <Button variant="ghost" size="icon" className="h-9 w-9 text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100">
                         <Phone className="h-5 w-5" />
                     </Button>
@@ -161,7 +227,72 @@ export function ChatWindow({ sessionId }: ChatWindowProps) {
                     </Button>
                 </div>
             </div>
-            <MessageList messages={messages} />
+
+            {/* Search Bar */}
+            {showSearch && (
+                <div className="px-6 py-3 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900">
+                    <div className="relative">
+                        <Search className="absolute left-3 top-2.5 h-4 w-4 text-zinc-400" />
+                        <Input
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            placeholder="Search messages in this chat..."
+                            className="pl-10 pr-10 bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 focus-visible:ring-indigo-500"
+                            autoFocus
+                        />
+                        {searchQuery && (
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className="absolute right-1 top-1 h-7 w-7"
+                                onClick={() => setSearchQuery('')}
+                            >
+                                <X className="h-4 w-4" />
+                            </Button>
+                        )}
+                    </div>
+                    {searchQuery && (
+                        <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-2">
+                            {filteredMessages.length === 0
+                                ? 'No messages found'
+                                : `Found ${filteredMessages.length} ${filteredMessages.length === 1 ? 'message' : 'messages'}`
+                            }
+                        </p>
+                    )}
+                </div>
+            )}
+
+            {/* Typing Indicator */}
+            {typingUsers.size > 0 && (
+                <div className="px-6 py-2 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900">
+                    <div className="flex items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400">
+                        <div className="flex gap-1">
+                            <span className="w-1.5 h-1.5 bg-zinc-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
+                            <span className="w-1.5 h-1.5 bg-zinc-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
+                            <span className="w-1.5 h-1.5 bg-zinc-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
+                        </div>
+                        <span>
+                            {(() => {
+                                const typingUserNames = Array.from(typingUsers)
+                                    .map(userId => {
+                                        const member = session?.members?.find((m: any) => m.userId === userId);
+                                        return member?.user?.name || 'Someone';
+                                    });
+
+                                if (typingUserNames.length === 1) {
+                                    return `${typingUserNames[0]} is typing...`;
+                                } else if (typingUserNames.length === 2) {
+                                    return `${typingUserNames[0]} and ${typingUserNames[1]} are typing...`;
+                                } else {
+                                    return `${typingUserNames[0]} and ${typingUserNames.length - 1} others are typing...`;
+                                }
+                            })()}
+                        </span>
+                    </div>
+                </div>
+            )}
+
+            <MessageList messages={filteredMessages} session={session} searchQuery={searchQuery} />
             <MessageInput onSendMessage={handleSendMessage} onTyping={handleTyping} />
         </div>
     );

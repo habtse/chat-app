@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../../lib/auth-context';
 import Link from 'next/link';
+import { GoogleLoginButton } from '../../../components/auth/google-login-button';
 
 export default function LoginPage() {
     const router = useRouter();
@@ -82,6 +83,21 @@ export default function LoginPage() {
                     </button>
                 </form>
 
+                <div className="mt-6">
+                    <div className="relative">
+                        <div className="absolute inset-0 flex items-center">
+                            <div className="w-full border-t border-gray-300"></div>
+                        </div>
+                        <div className="relative flex justify-center text-sm">
+                            <span className="px-2 bg-white text-gray-500">Or continue with</span>
+                        </div>
+                    </div>
+
+                    <div className="mt-6">
+                        <GoogleLoginButton />
+                    </div>
+                </div>
+
                 <div className="mt-6 text-center">
                     <p className="text-gray-600">
                         Don't have an account?{' '}
@@ -100,3 +116,5 @@ export default function LoginPage() {
         </div>
     );
 }
+
+

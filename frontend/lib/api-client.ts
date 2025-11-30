@@ -17,7 +17,7 @@ class APIClient {
     ): Promise<T> {
         const { token, ...fetchOptions } = options;
 
-        const headers: HeadersInit = {
+        const headers: any = {
             'Content-Type': 'application/json',
             ...fetchOptions.headers,
         };
@@ -58,6 +58,13 @@ class APIClient {
         return this.request('/auth/refresh', {
             method: 'POST',
             body: JSON.stringify({ refreshToken }),
+        });
+    }
+
+    async googleLogin(token: string) {
+        return this.request('/auth/google', {
+            method: 'POST',
+            body: JSON.stringify({ token }),
         });
     }
 
@@ -173,7 +180,7 @@ class APIClient {
     }
 
     async createAIChatSession(token: string) {
-        return this.request('/ai/session', {
+        return this.request<any>('/ai/session', {
             method: 'POST',
             token,
         });

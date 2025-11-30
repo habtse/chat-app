@@ -21,9 +21,31 @@ interface Message {
 
 interface MessageListProps {
     messages: Message[];
+    session?: any;
+    searchQuery?: string;
 }
 
-export function MessageList({ messages }: MessageListProps) {
+// Helper function to highlight search terms
+function highlightText(text: string, query: string) {
+    if (!query || !query.trim()) return text;
+
+    const parts = text.split(new RegExp(`(${query})`, 'gi'));
+    return (
+        <>
+            {parts.map((part, index) =>
+                part.toLowerCase() === query.toLowerCase() ? (
+                    <mark key={index} className="bg-yellow-200 dark:bg-yellow-600 text-zinc-900 dark:text-zinc-100 font-semibold px-0.5 rounded">
+                        {part}
+                    </mark>
+                ) : (
+                    part
+                )
+            )}
+        </>
+    );
+}
+
+export function MessageList({ messages, session, searchQuery }: MessageListProps) {
     const { user } = useAuth();
     const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -55,8 +77,8 @@ export function MessageList({ messages }: MessageListProps) {
                             <div className={cn("flex items-end max-w-[75%] gap-2", isMe ? 'flex-row-reverse' : 'flex-row')}>
                                 {!isMe && (
                                     <Avatar className="h-8 w-8 mb-1 flex-shrink-0">
-                                        <AvatarImage src={message.sender.profilePicUrl || undefined} />
-                                        <AvatarFallback className="text-xs">{message.sender.name[0]}</AvatarFallback>
+                                        <AvatarImage src={message.sender?.profilePicUrl || undefined} />
+                                        <AvatarFallback className="text-xs">{message.sender?.name?.[0] || '?'}</AvatarFallback>
                                     </Avatar>
                                 )}
 
@@ -68,13 +90,13 @@ export function MessageList({ messages }: MessageListProps) {
                                             : 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 rounded-bl-md border border-zinc-200 dark:border-zinc-700'
                                     )}
                                 >
-                                    {!isMe && (
+                                    {!isMe && message.sender?.name && (
                                         <p className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 mb-1">
                                             {message.sender.name}
                                         </p>
                                     )}
-                                    <p className="text-[15px] leading-relaxed whitespace-pre-wrap break-words">
-                                        {message.content}
+                                    <p className="text-[15px] leading-relaxed break-words">
+                                        {highlightText(message.content, searchQuery || '')}
                                     </p>
                                     <div className={cn(
                                         "flex items-center justify-end gap-1 mt-1.5",
