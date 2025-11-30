@@ -15,9 +15,20 @@ const server = http.createServer(app);
 const prisma = new PrismaClient();
 
 // --- Middleware ---
+// Configure CORS dynamically from FRONTEND_URL or FRONTEND_URLS (comma-separated)
+const rawFrontends = process.env.FRONTEND_URLS || process.env.FRONTEND_URL || 'http://localhost:3000';
+const allowedOrigins = rawFrontends.split(',').map(s => s.trim()).filter(Boolean);
+
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  origin: (origin, callback) => {
+    // Allow non-browser requests (e.g. server-to-server, curl) with no origin
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    console.warn(`Blocked CORS request from origin: ${origin}. Allowed: ${allowedOrigins.join(',')}`);
+    return callback(new Error('Not allowed by CORS'));
+  },
   credentials: true,
+  exposedHeaders: ['Set-Cookie'],
 }));
 app.use(express.json());
 
