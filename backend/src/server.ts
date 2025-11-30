@@ -21,11 +21,8 @@ const allowedOrigins = rawFrontends.split(',').map(s => s.trim()).filter(Boolean
 
 app.use(cors({
   origin: (origin, callback) => {
-    // Allow non-browser requests (e.g. server-to-server, curl) with no origin
-    if (!origin) return callback(null, true);
-    if (allowedOrigins.includes(origin)) return callback(null, true);
-    console.warn(`Blocked CORS request from origin: ${origin}. Allowed: ${allowedOrigins.join(',')}`);
-    return callback(new Error('Not allowed by CORS'));
+    // Allow all origins
+    return callback(null, true);
   },
   credentials: true,
   exposedHeaders: ['Set-Cookie'],
