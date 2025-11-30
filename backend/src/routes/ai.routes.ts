@@ -7,10 +7,43 @@ const router = Router();
 // All routes require authentication
 router.use(authenticateToken);
 
-// GET /api/v1/ai/user - Get AI user info
+/**
+ * @swagger
+ * tags:
+ *   name: AI
+ *   description: AI chat endpoints
+ */
+
+/**
+ * @swagger
+ * /ai/user:
+ *   get:
+ *     summary: Get AI user info
+ *     tags: [AI]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: AI user details
+ *       401:
+ *         description: Unauthorized
+ */
 router.get('/user', getAIUser);
 
-// POST /api/v1/ai/session - Create AI chat session
+/**
+ * @swagger
+ * /ai/session:
+ *   post:
+ *     summary: Create AI chat session
+ *     tags: [AI]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: AI session created successfully
+ *       401:
+ *         description: Unauthorized
+ */
 router.post('/session', createAIChatSession);
 
 export default router;
