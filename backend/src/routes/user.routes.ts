@@ -7,19 +7,120 @@ const router = Router();
 // All routes require authentication
 router.use(authenticateToken);
 
-// GET /api/v1/users - Get all users
+/**
+ * @swagger
+ * tags:
+ *   name: Users
+ *   description: User management endpoints
+ */
+
+/**
+ * @swagger
+ * /users:
+ *   get:
+ *     summary: Get all users
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of users
+ *       401:
+ *         description: Unauthorized
+ */
 router.get('/', getAllUsers);
 
-// GET /api/v1/users/me - Get current user
+/**
+ * @swagger
+ * /users/me:
+ *   get:
+ *     summary: Get current user
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Current user details
+ *       401:
+ *         description: Unauthorized
+ */
 router.get('/me', getCurrentUser);
 
-// GET /api/v1/users/online - Get online users
+/**
+ * @swagger
+ * /users/online:
+ *   get:
+ *     summary: Get online users
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of online users
+ *       401:
+ *         description: Unauthorized
+ */
 router.get('/online', getOnlineUsers);
 
-// GET /api/v1/users/:id - Get user by ID
+/**
+ * @swagger
+ * /users/{id}:
+ *   get:
+ *     summary: Get user by ID
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: User ID
+ *     responses:
+ *       200:
+ *         description: User details
+ *       404:
+ *         description: User not found
+ *       401:
+ *         description: Unauthorized
+ */
 router.get('/:id', getUserById);
 
-// PUT /api/v1/users/:id - Update user profile
+/**
+ * @swagger
+ * /users/{id}:
+ *   put:
+ *     summary: Update user profile
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: User ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *               email:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: User updated successfully
+ *       404:
+ *         description: User not found
+ *       401:
+ *         description: Unauthorized
+ */
 router.put('/:id', updateUserProfile);
 
 export default router;

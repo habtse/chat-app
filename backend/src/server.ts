@@ -48,6 +48,13 @@ app.get(`${API_PREFIX}/health`, (req: Request, res: Response) => {
   res.status(200).json({ status: 'ok', service: 'backend-api' });
 });
 
+// --- Swagger Documentation ---
+import swaggerUi from 'swagger-ui-express';
+import { specs } from './config/swagger';
+
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs));
+
+
 // --- WebSocket Server ---
 initWebSocketServer(server, prisma);
 
