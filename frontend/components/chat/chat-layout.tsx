@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { Sidebar, Session } from './sidebar';
 import { ChatWindow } from './chat-window';
+import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable';
 import { apiClient } from '@/lib/api-client';
 import { wsClient } from '@/lib/websocket-client';
 import { useAuth } from '@/lib/auth-context';
@@ -21,25 +22,35 @@ export function ChatLayout() {
         }
     }, [accessToken]);
 
-    // Listen for user status updates
+    // Mark messages as read when a session is opened
     useEffect(() => {
-        const handleStatusUpdate = (data: { userId: string; isOnline: boolean }) => {
-            setSessions((prevSessions) =>
-                prevSessions.map((session) => ({
-                    ...session,
-                    participants: session.participants.map((participant) =>
-                        participant.id === data.userId
-                            ? { ...participant, isOnline: data.isOnline }
-                            : participant
-                    ),
-                }))
-            );
+        if (selectedSessionId) {
+            // Notify backend that messages in this session have been read
+            wsClient.markAsRead(selectedSessionId);
+        }
+    }, [selectedSessionId]);
+
+    // Listen for MARK_READ events from the server to update unread counts in real-time
+    useEffect(() => {
+        const handleMarkRead = (payload: any) => {
+            if (!payload || !payload.sessionId) return;
+
+            setSessions(prev => prev.map(s => {
+                if (s.id !== payload.sessionId) return s;
+
+                // Update unreadCount if provided, otherwise set to 0
+                const unreadCount = typeof payload.unreadCount === 'number' ? payload.unreadCount : 0;
+
+                // Optionally mark latest message as read
+                const updatedLastMessage = s.lastMessage ? { ...s.lastMessage, isRead: true } : s.lastMessage;
+
+                return { ...s, unreadCount, lastMessage: updatedLastMessage };
+            }));
         };
 
-        wsClient.on('USER_STATUS_UPDATE', handleStatusUpdate);
-
+        wsClient.on('MARK_READ', handleMarkRead);
         return () => {
-            wsClient.off('USER_STATUS_UPDATE', handleStatusUpdate);
+            wsClient.off('MARK_READ', handleMarkRead);
         };
     }, []);
 
@@ -50,7 +61,10 @@ export function ChatLayout() {
             const formattedSessions = sessionList.map((session: any) => ({
                 ...session,
                 participants: session.members?.map((m: any) => m.user) || [],
-                lastMessage: session.messages?.[0]
+                lastMessage: session.messages?.[0] ? {
+                    ...session.messages[0],
+                    senderId: session.messages[0].sender?.id || session.messages[0].senderId
+                } : undefined
             }));
             setSessions(formattedSessions);
         } catch (error) {
@@ -65,20 +79,34 @@ export function ChatLayout() {
 
     return (
         <div className="flex h-screen overflow-hidden bg-zinc-50 dark:bg-zinc-950">
-            <Sidebar
-                sessions={sessions}
-                selectedId={selectedSessionId}
-                onSelect={setSelectedSessionId}
-                onSessionCreated={handleSessionCreated}
-                currentUserId={user?.id}
-                className={`w-full md:w-80 border-r border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 ${selectedSessionId ? 'hidden md:flex' : 'flex'}`}
-            />
-            <main className={`flex-1 flex-col min-w-0 bg-white/50 dark:bg-zinc-900/50 ${selectedSessionId ? 'flex' : 'hidden md:flex'}`}>
-                <ChatWindow
-                    sessionId={selectedSessionId}
-                    onBack={() => setSelectedSessionId(null)}
-                />
-            </main>
+            <ResizablePanelGroup direction="horizontal">
+                <ResizablePanel
+                    defaultSize={20}
+                    minSize={15}
+                    maxSize={40}
+                    className={`${selectedSessionId ? 'hidden md:block' : 'block'} border-r border-zinc-200 dark:border-zinc-800`}
+                >
+                    <Sidebar
+                        sessions={sessions}
+                        selectedId={selectedSessionId}
+                        onSelect={setSelectedSessionId}
+                        onSessionCreated={handleSessionCreated}
+                        currentUserId={user?.id}
+                        className="h-full w-full bg-white dark:bg-zinc-900"
+                    />
+                </ResizablePanel>
+
+                <ResizableHandle className="hidden md:flex" />
+
+                <ResizablePanel defaultSize={80}>
+                    <main className={`h-full flex-col min-w-0 bg-white/50 dark:bg-zinc-900/50 ${selectedSessionId ? 'flex' : 'hidden md:flex'}`}>
+                        <ChatWindow
+                            sessionId={selectedSessionId}
+                            onBack={() => setSelectedSessionId(null)}
+                        />
+                    </main>
+                </ResizablePanel>
+            </ResizablePanelGroup>
         </div>
     );
 }

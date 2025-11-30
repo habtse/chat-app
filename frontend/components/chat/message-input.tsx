@@ -1,9 +1,11 @@
-'use client';
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Send, Paperclip, Smile } from 'lucide-react';
+import dynamic from 'next/dynamic';
+import { EmojiClickData } from 'emoji-picker-react';
+
+const EmojiPicker = dynamic(() => import('emoji-picker-react'), { ssr: false });
 
 interface MessageInputProps {
     onSendMessage: (content: string) => void;
@@ -12,8 +14,23 @@ interface MessageInputProps {
 
 export function MessageInput({ onSendMessage, onTyping }: MessageInputProps) {
     const [content, setContent] = useState('');
+    const [showEmojiPicker, setShowEmojiPicker] = useState(false);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const pickerRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (pickerRef.current && !pickerRef.current.contains(event.target as Node)) {
+                setShowEmojiPicker(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, []);
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
         if (e.key === 'Enter' && !e.shiftKey) {
@@ -26,6 +43,7 @@ export function MessageInput({ onSendMessage, onTyping }: MessageInputProps) {
         if (content.trim()) {
             onSendMessage(content);
             setContent('');
+            setShowEmojiPicker(false);
             if (onTyping) onTyping(false);
             if (typingTimeoutRef.current) {
                 clearTimeout(typingTimeoutRef.current);
@@ -53,6 +71,10 @@ export function MessageInput({ onSendMessage, onTyping }: MessageInputProps) {
         }
     };
 
+    const onEmojiClick = (emojiData: EmojiClickData) => {
+        setContent((prev) => prev + emojiData.emoji);
+    };
+
     // Auto-resize
     useEffect(() => {
         if (textareaRef.current) {
@@ -62,7 +84,12 @@ export function MessageInput({ onSendMessage, onTyping }: MessageInputProps) {
     }, [content]);
 
     return (
-        <div className="p-4 border-t border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
+        <div className="p-4 border-t border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 relative">
+            {showEmojiPicker && (
+                <div className="absolute bottom-20 right-4 z-50" ref={pickerRef}>
+                    <EmojiPicker onEmojiClick={onEmojiClick} width={300} height={400} />
+                </div>
+            )}
             <div className="flex items-end gap-2">
                 <Button
                     variant="ghost"
@@ -84,6 +111,7 @@ export function MessageInput({ onSendMessage, onTyping }: MessageInputProps) {
                     <Button
                         variant="ghost"
                         size="icon"
+                        onClick={() => setShowEmojiPicker(!showEmojiPicker)}
                         className="absolute right-2 bottom-2 h-8 w-8 text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100"
                     >
                         <Smile className="h-5 w-5" />

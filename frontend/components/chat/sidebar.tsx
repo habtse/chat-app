@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -6,10 +6,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
-import { Search, LogOut, Settings, Plus } from 'lucide-react';
+import { Search, LogOut, Settings, Plus, Users, Check, CheckCheck } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 
 import { UserListDialog } from './user-list-dialog';
+import { GroupChatDialog } from './group-chat-dialog';
 
 export interface Session {
     id: string;
@@ -42,6 +43,27 @@ export function Sidebar({ sessions, selectedId, onSelect, onSessionCreated, curr
     const { user, logout } = useAuth();
     const router = useRouter();
     const [searchQuery, setSearchQuery] = useState('');
+    const containerRef = useRef<HTMLDivElement | null>(null);
+    const [containerWidth, setContainerWidth] = useState<number | null>(null);
+
+    useEffect(() => {
+        if (!containerRef.current) return;
+
+        const el = containerRef.current;
+        // Set initial width
+        setContainerWidth(el.getBoundingClientRect().width);
+
+        const ro = new ResizeObserver((entries) => {
+            for (const entry of entries) {
+                if (entry.target === el) {
+                    setContainerWidth(entry.contentRect.width);
+                }
+            }
+        });
+
+        ro.observe(el);
+        return () => ro.disconnect();
+    }, []);
 
     const filteredSessions = sessions.filter(session => {
         if (!searchQuery.trim()) return true;
@@ -63,8 +85,14 @@ export function Sidebar({ sessions, selectedId, onSelect, onSessionCreated, curr
         logout(() => router.push('/auth/login'));
     };
 
+    const formatPreview = (content?: string) => {
+        if (!content) return 'No messages yet';
+        // Replace newlines and excessive whitespace with a single space
+        return content.replace(/\s+/g, ' ').trim();
+    };
+
     return (
-        <div className={cn("flex flex-col h-full bg-white dark:bg-zinc-900", className)}>
+        <div ref={containerRef} className={cn("flex flex-col h-full bg-white dark:bg-zinc-900", className)}>
             {/* Header / User Profile */}
             <div className="p-4 border-b border-zinc-200 dark:border-zinc-800">
                 <div className="flex items-center justify-between mb-4">
@@ -84,6 +112,11 @@ export function Sidebar({ sessions, selectedId, onSelect, onSessionCreated, curr
                                 <Plus className="h-4 w-4" />
                             </Button>
                         </UserListDialog>
+                        <GroupChatDialog onSessionCreated={onSessionCreated}>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100">
+                                <Users className="h-4 w-4" />
+                            </Button>
+                        </GroupChatDialog>
                         <Button variant="ghost" size="icon" className="h-8 w-8 text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100">
                             <Settings className="h-4 w-4" />
                         </Button>
@@ -121,7 +154,7 @@ export function Sidebar({ sessions, selectedId, onSelect, onSessionCreated, curr
                                 key={session.id}
                                 onClick={() => onSelect(session.id)}
                                 className={cn(
-                                    "flex items-center gap-3 p-3 rounded-xl transition-all text-left group relative",
+                                    "flex items-center gap-3 p-3 rounded-xl max-w-30 transition-all text-left group relative",
                                     isSelected
                                         ? "bg-indigo-600 text-white shadow-md shadow-indigo-500/20"
                                         : "hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300"
@@ -138,7 +171,7 @@ export function Sidebar({ sessions, selectedId, onSelect, onSessionCreated, curr
                                         <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-green-500 border-2 border-white dark:border-zinc-900" />
                                     )}
                                 </div>
-                                <div className="flex-1 overflow-hidden min-w-0">
+                                <div className="flex-1 overflow-hidden min-w-0 max-w-30">
                                     <div className="flex items-center justify-between mb-0.5">
                                         <span className={cn("font-semibold truncate", isSelected ? "text-white" : "text-zinc-900 dark:text-zinc-100")}>
                                             {displayName}
@@ -153,14 +186,26 @@ export function Sidebar({ sessions, selectedId, onSelect, onSessionCreated, curr
                                         )}
                                     </div>
                                     <div className="flex items-center justify-between">
-                                        <span className={cn(
-                                            "text-sm truncate max-w-[85%]",
-                                            isSelected ? "text-indigo-100" : "text-zinc-500 dark:text-zinc-400"
-                                        )}>
-                                            {session.lastMessage?.content || "No messages yet"}
+                                        <span
+                                            className={cn(
+                                                "text-sm truncate flex-1 min-w-0 block overflow-hidden",
+                                                isSelected ? "text-indigo-100" : "text-zinc-500 dark:text-zinc-400"
+                                            )}
+                                            style={{ maxWidth: containerWidth ? `${Math.max(40, containerWidth - 88)}px` : undefined }}
+                                        >
+                                            {formatPreview(session.lastMessage?.content)}
                                         </span>
+                                        {session.lastMessage && session.lastMessage.senderId === user?.id && (
+                                            <span className="ml-1 flex-shrink-0">
+                                                {(session.lastMessage as any).isRead ? (
+                                                    <CheckCheck className="h-3 w-3 text-blue-500" />
+                                                ) : (
+                                                    <Check className="h-3 w-3 text-zinc-400" />
+                                                )}
+                                            </span>
+                                        )}
                                         {session.unreadCount && session.unreadCount > 0 ? (
-                                            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-indigo-500 text-white text-[10px] font-medium border-2 border-white dark:border-zinc-900">
+                                            <span className="ml-1 flex h-5 w-5 items-center justify-center rounded-full bg-indigo-500 text-white text-[10px] font-medium border-2 border-white dark:border-zinc-900 flex-shrink-0">
                                                 {session.unreadCount}
                                             </span>
                                         ) : null}

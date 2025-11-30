@@ -50,6 +50,7 @@ export const createSession = async (req: AuthenticatedRequest, res: Response) =>
                                     email: true,
                                     profilePicUrl: true,
                                     isOnline: true,
+                                    lastActive: true,
                                 }
                             }
                         }
@@ -92,6 +93,7 @@ export const createSession = async (req: AuthenticatedRequest, res: Response) =>
                                 email: true,
                                 profilePicUrl: true,
                                 isOnline: true,
+                                lastActive: true,
                             }
                         }
                     }
@@ -135,6 +137,7 @@ export const getUserSessions = async (req: AuthenticatedRequest, res: Response) 
                                 email: true,
                                 profilePicUrl: true,
                                 isOnline: true,
+                                lastActive: true,
                             }
                         }
                     }
@@ -143,7 +146,11 @@ export const getUserSessions = async (req: AuthenticatedRequest, res: Response) 
                 messages: {
                     take: 1,
                     orderBy: { createdAt: 'desc' },
-                    include: {
+                    select: {
+                        id: true,
+                        content: true,
+                        createdAt: true,
+                        isRead: true,
                         sender: {
                             select: {
                                 id: true,
@@ -153,13 +160,36 @@ export const getUserSessions = async (req: AuthenticatedRequest, res: Response) 
                     }
                 },
             },
-            orderBy: {
-                id: 'desc', // Most recent first
-            },
         });
 
-        console.log('sessions', sessions);
-        res.status(200).json(sessions);
+        // Calculate unread count for each session
+        const sessionsWithUnreadCount = await Promise.all(
+            sessions.map(async (session) => {
+                const unreadCount = await prisma.message.count({
+                    where: {
+                        chatSessionId: session.id,
+                        senderId: { not: userId },
+                        isRead: false,
+                    },
+                });
+
+                return {
+                    ...session,
+                    unreadCount,
+                };
+            })
+        );
+
+        // Sort sessions by most recent message timestamp
+        // Sessions with messages come first (sorted by message time), then sessions without messages
+        const sortedSessions = sessionsWithUnreadCount.sort((a, b) => {
+            const aTime = a.messages[0]?.createdAt ? new Date(a.messages[0].createdAt).getTime() : 0;
+            const bTime = b.messages[0]?.createdAt ? new Date(b.messages[0].createdAt).getTime() : 0;
+            return bTime - aTime; // Most recent first
+        });
+
+        // console.log('sessions', sessions);
+        res.status(200).json(sortedSessions);
     } catch (error) {
         console.error('Get user sessions error:', error);
         res.status(500).json({ message: 'Failed to fetch chat sessions' });
@@ -188,6 +218,7 @@ export const getSessionById = async (req: AuthenticatedRequest, res: Response) =
                                 email: true,
                                 profilePicUrl: true,
                                 isOnline: true,
+                                lastActive: true,
                             }
                         }
                     }
@@ -278,6 +309,7 @@ export const addMember = async (req: AuthenticatedRequest, res: Response) => {
                                 email: true,
                                 profilePicUrl: true,
                                 isOnline: true,
+                                lastActive: true,
                             }
                         }
                     }

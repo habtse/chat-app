@@ -126,7 +126,7 @@ async function handleAuthenticatedMessage(ws: AuthenticatedWebSocket, data: any,
       broadcastTypingIndicator(userId, payload.sessionId, type === 'TYPING_START');
       break;
     case 'MARK_READ':
-      // Implementation for MARK_READ (Bonus B3)
+      await handleMarkRead(userId, payload, prisma);
       break;
     default:
       sendError(ws, 'UNKNOWN_TYPE', `Unknown message type: ${type}`);
@@ -137,6 +137,8 @@ async function handleAuthenticatedMessage(ws: AuthenticatedWebSocket, data: any,
 
 async function handleSendMessage(senderId: string, payload: { sessionId: string, content: string }, prisma: PrismaClient) {
   const { sessionId, content } = payload;
+  console.log('Received message content:', content);
+  console.log('Content char codes:', content.split('').map(c => c.charCodeAt(0)));
 
   // 1. Validate user membership (Simplified check for MVP)
   const isMember = await prisma.groupMember.findUnique({
@@ -197,9 +199,18 @@ async function triggerAIResponse(sessionId: string, userMessage: any, prisma: Pr
     const { generateAIResponse, formatConversationHistory } = await import('../services/ai.service');
     const { getOrCreateAIUser } = await import('../controllers/ai.controller');
 
-    // Get conversation history
+    // Get AI user
+    const aiUser = await getOrCreateAIUser();
+
+    // Broadcast typing started
+    broadcastTypingIndicator(aiUser.id, sessionId, true);
+
+    // Get conversation history (exclude the current message to avoid duplication)
     const recentMessages = await prisma.message.findMany({
-      where: { chatSessionId: sessionId },
+      where: {
+        chatSessionId: sessionId,
+        id: { not: userMessage.id } // Exclude current message
+      },
       include: {
         sender: {
           select: { id: true, name: true, email: true }
@@ -214,9 +225,6 @@ async function triggerAIResponse(sessionId: string, userMessage: any, prisma: Pr
     // Generate AI response
     const aiResponseText = await generateAIResponse(userMessage.content, conversationHistory);
 
-    // Get AI user
-    const aiUser = await getOrCreateAIUser();
-
     // Save AI response to database
     const aiMessage = await prisma.message.create({
       data: {
@@ -228,16 +236,21 @@ async function triggerAIResponse(sessionId: string, userMessage: any, prisma: Pr
         sender: {
           select: { id: true, name: true, profilePicUrl: true }
         }
-      }
+      },
     });
 
+    // Broadcast typing stopped
+    broadcastTypingIndicator(aiUser.id, sessionId, false);
+
     // Broadcast AI response
-    setTimeout(() => {
-      broadcastMessage(sessionId, aiMessage);
-    }, 1000); // Small delay to simulate typing
+    broadcastMessage(sessionId, aiMessage);
 
   } catch (error) {
     console.error('Failed to generate AI response:', error);
+    // Ensure typing indicator is stopped even on error
+    const { getOrCreateAIUser } = await import('../controllers/ai.controller');
+    const aiUser = await getOrCreateAIUser();
+    broadcastTypingIndicator(aiUser.id, sessionId, false);
   }
 }
 
@@ -252,6 +265,28 @@ function handleJoinSession(userId: string, sessionId: string) {
 function handleLeaveSession(userId: string, sessionId: string) {
   sessionSubscriptions.get(userId)?.delete(sessionId);
   console.log(`User ${userId} left session ${sessionId}`);
+}
+
+async function handleMarkRead(userId: string, payload: { sessionId: string }, prisma: PrismaClient) {
+  const { sessionId } = payload;
+
+  try {
+    // Mark all unread messages in this session as read (except user's own messages)
+    await prisma.message.updateMany({
+      where: {
+        chatSessionId: sessionId,
+        senderId: { not: userId },
+        isRead: false,
+      },
+      data: {
+        isRead: true,
+      },
+    });
+
+    console.log(`User ${userId} marked messages as read in session ${sessionId}`);
+  } catch (error) {
+    console.error('Error marking messages as read:', error);
+  }
 }
 
 // --- Broadcast Functions ---

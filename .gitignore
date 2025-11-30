@@ -1,6 +1,48 @@
+### Node / JavaScript
 node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+### Build outputs
 dist/
+build/
+out/
+**/.next/
+frontend/.next/
+
+### Environment
 .env
 .env.*
+.env.local
+.env.production
+
+### OS / Editor
 .DS_Store
+.vscode/
+.idea/
+*.sublime-workspace
+*.sublime-project
+
+### Database / Storage
 postgres-data/
+
+### Logs, caches, misc
+*.log
+.cache/
+.parcel-cache/
+.next/cache/
+coverage/
+.eslintcache
+
+### Docker
+*.pid
+*.seed
+
+### Misc
+.serverless/
+.turbo/
+.vercel/
+.vercel_build_output/
+node-repl-history
