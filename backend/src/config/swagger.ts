@@ -10,8 +10,8 @@ const options = {
         },
         servers: [
             {
-                url: 'http://localhost:3001/api/v1',
-                description: 'Local Development Server',
+                url: 'https://chatapp.hummflytech.com/api/v1',
+                description: 'Production Server',
             },
         ],
         components: {

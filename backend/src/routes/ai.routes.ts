@@ -10,21 +10,21 @@ router.use(authenticateToken);
 /**
  * @swagger
  * tags:
- *   name: AI
- *   description: AI chat endpoints
+ *   name: Assistant
+ *   description: Assistant chat endpoints
  */
 
 /**
  * @swagger
  * /ai/user:
  *   get:
- *     summary: Get AI user info
- *     tags: [AI]
+ *     summary: Get Assistant user info
+ *     tags: [Assistant]
  *     security:
  *       - bearerAuth: []
  *     responses:
  *       200:
- *         description: AI user details
+ *         description: Assistant user details
  *       401:
  *         description: Unauthorized
  */
@@ -34,13 +34,13 @@ router.get('/user', getAIUser);
  * @swagger
  * /ai/session:
  *   post:
- *     summary: Create AI chat session
- *     tags: [AI]
+ *     summary: Create Assistant chat session
+ *     tags: [Assistant]
  *     security:
  *       - bearerAuth: []
  *     responses:
  *       200:
- *         description: AI session created successfully
+ *         description: Assistant session created successfully
  *       401:
  *         description: Unauthorized
  */
