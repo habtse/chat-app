@@ -81,19 +81,43 @@ export function ChatLayout() {
         <div className="flex h-screen overflow-hidden bg-zinc-50 dark:bg-zinc-950">
             <ResizablePanelGroup direction="horizontal">
                 <ResizablePanel
-                    defaultSize={20}
-                    minSize={15}
-                    maxSize={40}
-                    className={`${selectedSessionId ? 'hidden md:block' : 'block'} border-r border-zinc-200 dark:border-zinc-800`}
+                    defaultSize={100}
+                    minSize={20}
+                    maxSize={100}
+                    className={`${selectedSessionId ? 'hidden md:block' : 'block'} chat-sidebar-panel border-r border-zinc-200 dark:border-zinc-800`}
                 >
-                    <Sidebar
-                        sessions={sessions}
-                        selectedId={selectedSessionId}
-                        onSelect={setSelectedSessionId}
-                        onSessionCreated={handleSessionCreated}
-                        currentUserId={user?.id}
-                        className="h-full w-full bg-white dark:bg-zinc-900"
-                    />
+                    <style>{`
+                        /* default: mobile = 100% */
+                        .chat-sidebar-panel .responsive-sidebar {
+                            flex-basis: 100% !important;
+                            max-width: 100% !important;
+                        }
+                        /* tablet (md) = 40% */
+                        @media (min-width: 768px) {
+                            .chat-sidebar-panel .responsive-sidebar {
+                                flex-basis: 40% !important;
+                                max-width: 40% !important;
+                            }
+                        }
+                        /* laptop (lg) = 20% */
+                        @media (min-width: 1024px) {
+                            .chat-sidebar-panel .responsive-sidebar {
+                                flex-basis: 20% !important;
+                                max-width: 20% !important;
+                            }
+                        }
+                    `}</style>
+
+                    <div className="responsive-sidebar h-full w-full">
+                        <Sidebar
+                            sessions={sessions}
+                            selectedId={selectedSessionId}
+                            onSelect={setSelectedSessionId}
+                            onSessionCreated={handleSessionCreated}
+                            currentUserId={user?.id}
+                            className="h-full w-full bg-white dark:bg-zinc-900"
+                        />
+                    </div>
                 </ResizablePanel>
 
                 <ResizableHandle className="hidden md:flex" />

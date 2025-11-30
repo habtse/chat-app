@@ -140,7 +140,7 @@ export function Sidebar({ sessions, selectedId, onSelect, onSessionCreated, curr
 
             {/* Session List */}
             <ScrollArea className="flex-1">
-                <div className="flex flex-col gap-1 p-2">
+                <div className="flex flex-col gap-1 py-2">
                     {filteredSessions.map((session) => {
                         const otherParticipants = session.participants?.filter(p => p.id !== currentUserId) || [];
                         const displayParticipant = otherParticipants[0];
@@ -154,7 +154,7 @@ export function Sidebar({ sessions, selectedId, onSelect, onSessionCreated, curr
                                 key={session.id}
                                 onClick={() => onSelect(session.id)}
                                 className={cn(
-                                    "flex items-center gap-3 p-3 rounded-xl max-w-30 transition-all text-left group relative",
+                                    "flex items-center gap-3 p-3 rounded-xl w-full transition-all text-left group relative",
                                     isSelected
                                         ? "bg-indigo-600 text-white shadow-md shadow-indigo-500/20"
                                         : "hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300"
@@ -171,7 +171,7 @@ export function Sidebar({ sessions, selectedId, onSelect, onSessionCreated, curr
                                         <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-green-500 border-2 border-white dark:border-zinc-900" />
                                     )}
                                 </div>
-                                <div className="flex-1 overflow-hidden min-w-0 max-w-30">
+                                <div className="flex-1 overflow-hidden min-w-0">
                                     <div className="flex items-center justify-between mb-0.5">
                                         <span className={cn("font-semibold truncate", isSelected ? "text-white" : "text-zinc-900 dark:text-zinc-100")}>
                                             {displayName}
