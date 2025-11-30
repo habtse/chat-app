@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { formatDistanceToNow } from 'date-fns';
 import { MessageList } from './message-list';
 import { MessageInput } from './message-input';
 import { apiClient } from '@/lib/api-client';
@@ -8,14 +9,16 @@ import { wsClient } from '@/lib/websocket-client';
 import { useAuth } from '@/lib/auth-context';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { Loader2, Phone, Video, MoreVertical, Users, Search, X } from 'lucide-react';
+import { Loader2, Phone, Video, MoreVertical, Users, Search, X, ArrowLeft } from 'lucide-react';
 import { Input } from '../ui/input';
+import { GroupDetailsDialog } from './group-details-dialog';
 
 interface ChatWindowProps {
     sessionId: string | null;
+    onBack?: () => void;
 }
 
-export function ChatWindow({ sessionId }: ChatWindowProps) {
+export function ChatWindow({ sessionId, onBack }: ChatWindowProps) {
     const { accessToken, user } = useAuth();
     const [messages, setMessages] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(false);
@@ -156,29 +159,53 @@ export function ChatWindow({ sessionId }: ChatWindowProps) {
     const displayName = session?.isGroup ? session?.name : displayMember?.name || 'Chat';
     const displayImage = session?.isGroup ? undefined : displayMember?.profilePicUrl;
     const isOnline = displayMember?.isOnline;
+    const lastActive = displayMember?.lastActive;
 
     return (
         <div className="flex flex-col h-full bg-white dark:bg-zinc-900">
+
             {/* Header */}
             <div className="px-6 py-4 border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                    <div className="relative">
-                        <Avatar className="h-10 w-10 border border-zinc-200 dark:border-zinc-700">
-                            <AvatarImage src={displayImage || undefined} />
-                            <AvatarFallback>
-                                {session?.isGroup ? <Users className="h-5 w-5" /> : displayName?.[0]}
-                            </AvatarFallback>
-                        </Avatar>
-                        {isOnline && !session?.isGroup && (
-                            <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-green-500 border-2 border-white dark:border-zinc-900" />
-                        )}
-                    </div>
-                    <div>
-                        <h3 className="font-semibold text-zinc-900 dark:text-zinc-100">{displayName}</h3>
-                        <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                            {session?.isGroup ? `${otherMembers.length + 1} members` : isOnline ? 'Online' : 'Offline'}
-                        </p>
-                    </div>
+                    {onBack && (
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="md:hidden mr-1 -ml-2 h-8 w-8"
+                            onClick={onBack}
+                        >
+                            <ArrowLeft className="h-5 w-5" />
+                        </Button>
+                    )}
+
+                    <GroupDetailsDialog session={session}>
+                        <div className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity">
+                            <div className="relative">
+                                <Avatar className="h-10 w-10 border border-zinc-200 dark:border-zinc-700">
+                                    <AvatarImage src={displayImage || undefined} />
+                                    <AvatarFallback>
+                                        {session?.isGroup ? <Users className="h-5 w-5" /> : displayName?.[0]}
+                                    </AvatarFallback>
+                                </Avatar>
+                                {isOnline && !session?.isGroup && (
+                                    <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-green-500 border-2 border-white dark:border-zinc-900" />
+                                )}
+                            </div>
+                            <div>
+                                <h3 className="font-semibold text-zinc-900 dark:text-zinc-100">{displayName}</h3>
+                                <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                                    {session?.isGroup
+                                        ? `${otherMembers.length + 1} members`
+                                        : isOnline
+                                            ? 'Online'
+                                            : lastActive
+                                                ? `Last seen ${formatDistanceToNow(new Date(lastActive), { addSuffix: true })}`
+                                                : 'Offline'
+                                    }
+                                </p>
+                            </div>
+                        </div>
+                    </GroupDetailsDialog>
                 </div>
                 <div className="flex gap-1">
                     <Button

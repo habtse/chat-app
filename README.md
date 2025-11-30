@@ -138,6 +138,23 @@ After seeding the database, you can use these test accounts:
 
 ## Testing the Application
 
+## Recent UI & Real-time Improvements
+
+- Sidebar message preview now truncates reliably based on the actual sidebar width. A `ResizeObserver` measures the sidebar and the frontend applies a dynamic `max-width` so long messages show an ellipsis (`...`) responsively as you resize the panel.
+- Message previews are sanitized (newlines and extra whitespace collapsed) before rendering so they don't break the single-line preview/ellipsis behavior.
+- Read receipts/unread counts update in real-time: when a session is opened the client marks messages read and the server should broadcast a `MARK_READ` event. The frontend listens for `MARK_READ` and updates unread counts and last-message read status without requiring a full page refresh.
+
+How to verify these features locally:
+
+1. Start the backend and frontend (see Quick Start).
+2. Open the app in two separate browser windows (or one normal + one incognito) and login as different users.
+3. In one window, send a message to a session the other window is a member of.
+4. In the receiving window, open the session — the unread badge should clear and the sender's view should receive a `MARK_READ` broadcast that updates the unread count without a refresh.
+5. Resize the sidebar using the UI handle — long message previews should update and show `...` when there is insufficient space.
+
+If the unread badge doesn't clear automatically, check the backend's WebSocket log to ensure it emits `MARK_READ` with a payload containing `sessionId` (and optionally `unreadCount`).
+
+
 ### 1. Authentication Flow
 1. Go to http://localhost:3000
 2. Click "Login" or navigate to `/auth/login`

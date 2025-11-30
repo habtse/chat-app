@@ -159,10 +159,10 @@ export class WebSocketClient {
         });
     }
 
-    markAsRead(messageId: string) {
+    markAsRead(sessionId: string) {
         this.send({
             type: 'MARK_READ',
-            payload: { messageId },
+            payload: { sessionId },
         });
     }
 

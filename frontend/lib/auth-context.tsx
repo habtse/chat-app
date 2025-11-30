@@ -17,8 +17,9 @@ interface AuthContextType {
     isLoading: boolean;
     login: (email: string, password: string) => Promise<void>;
     register: (email: string, name: string, password: string) => Promise<void>;
-    logout: () => void;
+    logout: (callback?: () => void) => void;
     refreshAccessToken: () => Promise<void>;
+    loginWithGoogle: (token: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -87,7 +88,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
     };
 
-    const logout = () => {
+    const logout = (callback?: () => void) => {
         setUser(null);
         setAccessToken(null);
         setRefreshToken(null);
@@ -98,6 +99,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         // Disconnect WebSocket
         wsClient.disconnect();
+
+        // Use callback for navigation if provided, otherwise fallback to window.location
+        if (callback) {
+            callback();
+        } else {
+            window.location.href = '/auth/login';
+        }
     };
 
     const refreshAccessToken = async () => {
@@ -131,6 +139,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return () => clearInterval(interval);
     }, [accessToken, refreshToken]);
 
+    const loginWithGoogle = async (token: string) => {
+        try {
+            const response: any = await apiClient.googleLogin(token);
+
+            setUser(response.user);
+            setAccessToken(response.accessToken);
+            setRefreshToken(response.refreshToken);
+
+            // Store in localStorage
+            localStorage.setItem('accessToken', response.accessToken);
+            localStorage.setItem('refreshToken', response.refreshToken);
+            localStorage.setItem('user', JSON.stringify(response.user));
+
+            // Connect WebSocket
+            wsClient.connect(response.accessToken);
+        } catch (error: any) {
+            throw new Error(error.message || 'Google login failed');
+        }
+    };
+
     return (
         <AuthContext.Provider
             value={{
@@ -141,6 +169,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 register,
                 logout,
                 refreshAccessToken,
+                loginWithGoogle,
             }}
         >
             {children}

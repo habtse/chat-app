@@ -83,6 +83,7 @@ export const updateUserProfile = async (req: AuthenticatedRequest, res: Response
                 profilePicUrl: true,
                 isOnline: true,
                 authType: true,
+                lastActive: true,
             },
         });
 
@@ -106,6 +107,7 @@ export const getOnlineUsers = async (req: AuthenticatedRequest, res: Response) =
                 name: true,
                 profilePicUrl: true,
                 isOnline: true,
+                lastActive: true,
             },
         });
 
@@ -134,6 +136,7 @@ export const getCurrentUser = async (req: AuthenticatedRequest, res: Response) =
                 profilePicUrl: true,
                 isOnline: true,
                 authType: true,
+                lastActive: true,
                 createdAt: true,
             },
         });
