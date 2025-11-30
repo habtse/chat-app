@@ -51,8 +51,15 @@ app.get(`${API_PREFIX}/health`, (req: Request, res: Response) => {
 // --- Swagger Documentation ---
 import swaggerUi from 'swagger-ui-express';
 import { specs } from './config/swagger';
+import path from 'path';
 
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs));
+// Serve static files (for favicon)
+app.use('/public', express.static(path.join(__dirname, 'public')));
+
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs, {
+  customSiteTitle: "Shipper Chat API",
+  customfavIcon: "/public/favicon.png"
+}));
 
 
 // --- WebSocket Server ---

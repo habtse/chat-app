@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node dist/server.js",
     "dev": "ts-node-dev --respawn src/server.ts",
-    "build": "tsc",
+    "build": "tsc && mkdir -p dist/public && cp -r src/public/* dist/public",
     "db:push": "prisma db push --skip-generate",
     "db:migrate": "prisma migrate dev",
     "db:seed": "ts-node prisma/seed.ts"
