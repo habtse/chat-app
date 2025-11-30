@@ -77,60 +77,94 @@ export function ChatLayout() {
         setSelectedSessionId(newSession.id);
     };
 
+    // Use a JS media-query check to render only one Sidebar instance.
+    // This avoids a brief/hydration-time duplicate that can happen if both
+    // mobile and desktop markup are present and only hidden via CSS.
+    const [isMobile, setIsMobile] = useState<boolean | null>(null);
+
+    useEffect(() => {
+        const mq = window.matchMedia('(min-width: 768px)');
+        const handle = (e: MediaQueryListEvent) => setIsMobile(!e.matches);
+
+        // initialize
+        setIsMobile(!mq.matches);
+
+        if (mq.addEventListener) {
+            mq.addEventListener('change', handle);
+        } else {
+            // fallback for older browsers
+            // @ts-ignore
+            mq.addListener(handle);
+        }
+
+        return () => {
+            if (mq.removeEventListener) {
+                mq.removeEventListener('change', handle);
+            } else {
+                // @ts-ignore
+                mq.removeListener(handle);
+            }
+        };
+    }, []);
+
     return (
         <div className="flex h-screen overflow-hidden bg-zinc-50 dark:bg-zinc-950">
-            <ResizablePanelGroup direction="horizontal">
-                <ResizablePanel
-                    defaultSize={100}
-                    minSize={20}
-                    maxSize={100}
-                    className={`${selectedSessionId ? 'hidden md:block' : 'block'} chat-sidebar-panel border-r border-zinc-200 dark:border-zinc-800`}
-                >
-                    <style>{`
-                        /* default: mobile = 100% */
-                        .chat-sidebar-panel .responsive-sidebar {
-                            flex-basis: 100% !important;
-                            max-width: 100% !important;
-                        }
-                        /* tablet (md) = 40% */
-                        @media (min-width: 768px) {
-                            .chat-sidebar-panel .responsive-sidebar {
-                                flex-basis: 40% !important;
-                                max-width: 40% !important;
-                            }
-                        }
-                        /* laptop (lg) = 20% */
-                        @media (min-width: 1024px) {
-                            .chat-sidebar-panel .responsive-sidebar {
-                                flex-basis: 20% !important;
-                                max-width: 20% !important;
-                            }
-                        }
-                    `}</style>
+        {/* While we haven't determined size, render nothing to avoid duplicates */}
+        {isMobile === null ? null : isMobile ? (
+            // Mobile Layout - single Sidebar or ChatWindow
+            <div className="w-full h-full flex">
+            {!selectedSessionId ? (
+                <div className="w-full h-full">
+                <Sidebar
+                    sessions={sessions}
+                    selectedId={selectedSessionId}
+                    onSelect={setSelectedSessionId}
+                    onSessionCreated={handleSessionCreated}
+                    currentUserId={user?.id}
+                    className="h-full w-full bg-white dark:bg-zinc-900"
+                />
+                </div>
+            ) : (
+                <main className="w-full h-full flex flex-col min-w-0 bg-white/50 dark:bg-zinc-900/50">
+                <ChatWindow
+                    sessionId={selectedSessionId}
+                    onBack={() => setSelectedSessionId(null)}
+                />
+                </main>
+            )}
+            </div>
+        ) : (
+            // Desktop Layout - Resizable Panels
+            <ResizablePanelGroup direction="horizontal" className="hidden md:flex">
+            <ResizablePanel
+                defaultSize={20}
+                minSize={15}
+                maxSize={40}
+                className="border-r border-zinc-200 dark:border-zinc-800"
+            >
+                <Sidebar
+                sessions={sessions}
+                selectedId={selectedSessionId}
+                onSelect={setSelectedSessionId}
+                onSessionCreated={handleSessionCreated}
+                currentUserId={user?.id}
+                className="h-full w-full bg-white dark:bg-zinc-900"
+                />
+            </ResizablePanel>
 
-                    <div className="responsive-sidebar h-full w-full">
-                        <Sidebar
-                            sessions={sessions}
-                            selectedId={selectedSessionId}
-                            onSelect={setSelectedSessionId}
-                            onSessionCreated={handleSessionCreated}
-                            currentUserId={user?.id}
-                            className="h-full w-full bg-white dark:bg-zinc-900"
-                        />
-                    </div>
-                </ResizablePanel>
+            <ResizableHandle />
 
-                <ResizableHandle className="hidden md:flex" />
-
-                <ResizablePanel defaultSize={80}>
-                    <main className={`h-full flex-col min-w-0 bg-white/50 dark:bg-zinc-900/50 ${selectedSessionId ? 'flex' : 'hidden md:flex'}`}>
-                        <ChatWindow
-                            sessionId={selectedSessionId}
-                            onBack={() => setSelectedSessionId(null)}
-                        />
-                    </main>
-                </ResizablePanel>
+            <ResizablePanel defaultSize={80}>
+                <main className="h-full flex flex-col min-w-0 bg-white/50 dark:bg-zinc-900/50">
+                <ChatWindow
+                    sessionId={selectedSessionId}
+                    onBack={() => setSelectedSessionId(null)}
+                />
+                </main>
+            </ResizablePanel>
             </ResizablePanelGroup>
+        )}
         </div>
     );
+    
 }
