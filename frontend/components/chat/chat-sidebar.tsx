@@ -13,6 +13,7 @@ import { Badge } from '../ui/badge';
 import { CreateGroupDialog } from './create-group-dialog';
 import { CreateCategoryDialog } from './create-category-dialog';
 import { MessageSearchDialog } from './message-search-dialog';
+import { ModeToggle } from '../mode-toggle';
 import { LogOut, Plus, Search, MessageSquare, Users, Bot, Check, CheckCheck } from 'lucide-react';
 
 interface ChatSidebarProps {
@@ -171,9 +172,12 @@ export function ChatSidebar({ currentSessionId, onSelectSession, onSelectUser }:
                             </div>
                         </div>
                     </div>
-                    <Button variant="ghost" size="icon" onClick={handleLogout}>
-                        <LogOut className="h-4 w-4 text-gray-500" />
-                    </Button>
+                    <div className="flex items-center gap-1">
+                        <ModeToggle />
+                        <Button variant="ghost" size="icon" onClick={handleLogout}>
+                            <LogOut className="h-4 w-4 text-gray-500" />
+                        </Button>
+                    </div>
                 </div>
 
                 <div className="relative">

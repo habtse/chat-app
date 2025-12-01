@@ -137,8 +137,8 @@ export function ChatLayout() {
             // Desktop Layout - Resizable Panels
             <ResizablePanelGroup direction="horizontal" className="hidden md:flex">
             <ResizablePanel
-                defaultSize={20}
-                minSize={15}
+                defaultSize={30}
+                minSize={25}
                 maxSize={40}
                 className="border-r border-zinc-200 dark:border-zinc-800"
             >
