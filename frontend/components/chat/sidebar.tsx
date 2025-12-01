@@ -8,9 +8,12 @@ import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
 import { Search, LogOut, Settings, Plus, Users, Check, CheckCheck } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
+import { ModeToggle } from '@/components/mode-toggle';
 
 import { UserListDialog } from './user-list-dialog';
+
 import { GroupChatDialog } from './group-chat-dialog';
+import { HelpDialog } from './help-dialog';
 
 export interface Session {
     id: string;
@@ -44,7 +47,18 @@ export function Sidebar({ sessions, selectedId, onSelect, onSessionCreated, curr
     const router = useRouter();
     const [searchQuery, setSearchQuery] = useState('');
     const containerRef = useRef<HTMLDivElement | null>(null);
+
     const [containerWidth, setContainerWidth] = useState<number | null>(null);
+    const [showHelp, setShowHelp] = useState(false);
+
+    useEffect(() => {
+        // Check if user has seen help
+        const hasSeenHelp = localStorage.getItem('hasSeenHelp');
+        if (!hasSeenHelp) {
+            setShowHelp(true);
+            localStorage.setItem('hasSeenHelp', 'true');
+        }
+    }, []);
 
     useEffect(() => {
         if (!containerRef.current) return;
@@ -117,9 +131,18 @@ export function Sidebar({ sessions, selectedId, onSelect, onSessionCreated, curr
                                 <Users className="h-4 w-4" />
                             </Button>
                         </GroupChatDialog>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100">
+
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100"
+                            onClick={() => setShowHelp(true)}
+                        >
                             <Settings className="h-4 w-4" />
                         </Button>
+                        <div className="flex items-center justify-center h-8 w-8">
+                            <ModeToggle />
+                        </div>
                         <Button variant="ghost" size="icon" onClick={handleLogout} className="h-8 w-8 text-zinc-500 hover:text-red-600">
                             <LogOut className="h-4 w-4" />
                         </Button>
@@ -216,6 +239,8 @@ export function Sidebar({ sessions, selectedId, onSelect, onSessionCreated, curr
                     })}
                 </div>
             </ScrollArea>
+
+            <HelpDialog open={showHelp} onOpenChange={setShowHelp} />
         </div>
     );
 }

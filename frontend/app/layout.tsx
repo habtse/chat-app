@@ -4,6 +4,7 @@ import { GoogleOAuthProvider } from '@react-oauth/google';
 import './globals.css';
 import { AuthProvider } from '../lib/auth-context'
 import { ToastProvider } from '../components/ui/use-toast'
+import { ThemeProvider } from '../components/theme-provider'
 import './globals.css'
 
 const inter = Inter({ subsets: ['latin'] })
@@ -23,9 +24,16 @@ export default function RootLayout({
       <body className={inter.className}>
         <GoogleOAuthProvider clientId={process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || ''}>
           <AuthProvider>
-            <ToastProvider>
-              {children}
-            </ToastProvider>
+            <ThemeProvider
+              attribute="class"
+              defaultTheme="system"
+              enableSystem
+              disableTransitionOnChange
+            >
+              <ToastProvider>
+                {children}
+              </ToastProvider>
+            </ThemeProvider>
           </AuthProvider>
         </GoogleOAuthProvider>
       </body>
