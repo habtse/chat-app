@@ -13,12 +13,66 @@ export default function LoginPage() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
+    const [emailError, setEmailError] = useState('');
+    const [passwordError, setPasswordError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
+
+    const validateEmail = (email: string): boolean => {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!email) {
+            setEmailError('Email is required');
+            return false;
+        }
+        if (!emailRegex.test(email)) {
+            setEmailError('Please enter a valid email address');
+            return false;
+        }
+        setEmailError('');
+        return true;
+    };
+
+    const validatePassword = (password: string): boolean => {
+        if (!password) {
+            setPasswordError('Password is required');
+            return false;
+        }
+        if (password.length < 6) {
+            setPasswordError('Password must be at least 6 characters');
+            return false;
+        }
+        setPasswordError('');
+        return true;
+    };
+
+    const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = e.target.value;
+        setEmail(value);
+        if (emailError) {
+            validateEmail(value);
+        }
+    };
+
+    const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = e.target.value;
+        setPassword(value);
+        if (passwordError) {
+            validatePassword(value);
+        }
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
+
+        // Validate all fields
+        const isEmailValid = validateEmail(email);
+        const isPasswordValid = validatePassword(password);
+
+        if (!isEmailValid || !isPasswordValid) {
+            return;
+        }
+
         setIsLoading(true);
 
         try {
@@ -54,11 +108,17 @@ export default function LoginPage() {
                             id="email"
                             type="email"
                             value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            required
-                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition"
+                            onChange={handleEmailChange}
+                            onBlur={() => validateEmail(email)}
+                            className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:border-transparent outline-none transition ${emailError
+                                    ? 'border-red-500 focus:ring-red-500'
+                                    : 'border-gray-300 focus:ring-indigo-500'
+                                }`}
                             placeholder="you@example.com"
                         />
+                        {emailError && (
+                            <p className="mt-1 text-sm text-red-600">{emailError}</p>
+                        )}
                     </div>
 
                     <div>
@@ -70,9 +130,12 @@ export default function LoginPage() {
                                 id="password"
                                 type={showPassword ? "text" : "password"}
                                 value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                required
-                                className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition"
+                                onChange={handlePasswordChange}
+                                onBlur={() => validatePassword(password)}
+                                className={`w-full px-4 py-3 pr-12 border rounded-lg focus:ring-2 focus:border-transparent outline-none transition ${passwordError
+                                        ? 'border-red-500 focus:ring-red-500'
+                                        : 'border-gray-300 focus:ring-indigo-500'
+                                    }`}
                                 placeholder="••••••••"
                             />
                             <button
@@ -87,6 +150,9 @@ export default function LoginPage() {
                                 )}
                             </button>
                         </div>
+                        {passwordError && (
+                            <p className="mt-1 text-sm text-red-600">{passwordError}</p>
+                        )}
                     </div>
 
                     <button

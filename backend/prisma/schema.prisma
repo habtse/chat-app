@@ -20,6 +20,9 @@ model User {
   profilePicUrl String?
   authType      String    // "JWT" or "GOOGLE"
   isOnline      Boolean   @default(false)
+  otpCode       String?   // For email verification
+  otpExpires    DateTime? // Expiration time for OTP
+  isVerified    Boolean   @default(false) // Email verification status
   createdAt     DateTime  @default(now())
   lastActive    DateTime  @updatedAt // SDS 1.2
 

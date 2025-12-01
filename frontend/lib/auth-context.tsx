@@ -20,6 +20,7 @@ interface AuthContextType {
     logout: (callback?: () => void) => void;
     refreshAccessToken: () => Promise<void>;
     loginWithGoogle: (token: string) => Promise<void>;
+    verifyEmail: (email: string, otp: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -70,7 +71,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const register = async (email: string, name: string, password: string) => {
         try {
-            const response: any = await apiClient.register({ email, name, password });
+            await apiClient.register({ email, name, password });
+            // Don't set user/token here, wait for verification
+        } catch (error: any) {
+            throw new Error(error.message || 'Registration failed');
+        }
+    };
+
+    const verifyEmail = async (email: string, otp: string) => {
+        try {
+            const response: any = await apiClient.verifyEmail({ email, otp });
 
             setUser(response.user);
             setAccessToken(response.accessToken);
@@ -84,7 +94,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             // Connect WebSocket
             wsClient.connect(response.accessToken);
         } catch (error: any) {
-            throw new Error(error.message || 'Registration failed');
+            throw new Error(error.message || 'Verification failed');
         }
     };
 
@@ -170,6 +180,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 logout,
                 refreshAccessToken,
                 loginWithGoogle,
+                verifyEmail,
             }}
         >
             {children}

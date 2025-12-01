@@ -15,22 +15,126 @@ export default function RegisterPage() {
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [error, setError] = useState('');
+    const [nameError, setNameError] = useState('');
+    const [emailError, setEmailError] = useState('');
+    const [passwordError, setPasswordError] = useState('');
+    const [confirmPasswordError, setConfirmPasswordError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+    const validateName = (name: string): boolean => {
+        if (!name.trim()) {
+            setNameError('Name is required');
+            return false;
+        }
+        if (name.trim().length < 2) {
+            setNameError('Name must be at least 2 characters');
+            return false;
+        }
+        setNameError('');
+        return true;
+    };
+
+    const validateEmail = (email: string): boolean => {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!email) {
+            setEmailError('Email is required');
+            return false;
+        }
+        if (!emailRegex.test(email)) {
+            setEmailError('Please enter a valid email address');
+            return false;
+        }
+        setEmailError('');
+        return true;
+    };
+
+    const validatePassword = (password: string): boolean => {
+        if (!password) {
+            setPasswordError('Password is required');
+            return false;
+        }
+        if (password.length < 6) {
+            setPasswordError('Password must be at least 6 characters');
+            return false;
+        }
+        if (!/(?=.*[a-z])/.test(password)) {
+            setPasswordError('Password must contain at least one lowercase letter');
+            return false;
+        }
+        if (!/(?=.*[A-Z])/.test(password)) {
+            setPasswordError('Password must contain at least one uppercase letter');
+            return false;
+        }
+        if (!/(?=.*\d)/.test(password)) {
+            setPasswordError('Password must contain at least one number');
+            return false;
+        }
+        setPasswordError('');
+        return true;
+    };
+
+    const validateConfirmPassword = (confirmPassword: string): boolean => {
+        if (!confirmPassword) {
+            setConfirmPasswordError('Please confirm your password');
+            return false;
+        }
+        if (confirmPassword !== password) {
+            setConfirmPasswordError('Passwords do not match');
+            return false;
+        }
+        setConfirmPasswordError('');
+        return true;
+    };
+
+    const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = e.target.value;
+        setName(value);
+        if (nameError) {
+            validateName(value);
+        }
+    };
+
+    const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = e.target.value;
+        setEmail(value);
+        if (emailError) {
+            validateEmail(value);
+        }
+    };
+
+    const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = e.target.value;
+        setPassword(value);
+        if (passwordError) {
+            validatePassword(value);
+        }
+        // Re-validate confirm password if it's already filled
+        if (confirmPassword && confirmPasswordError) {
+            validateConfirmPassword(confirmPassword);
+        }
+    };
+
+    const handleConfirmPasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = e.target.value;
+        setConfirmPassword(value);
+        if (confirmPasswordError) {
+            validateConfirmPassword(value);
+        }
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
 
-        // Validation
-        if (password.length < 6) {
-            setError('Password must be at least 6 characters');
-            return;
-        }
+        // Validate all fields
+        const isNameValid = validateName(name);
+        const isEmailValid = validateEmail(email);
+        const isPasswordValid = validatePassword(password);
+        const isConfirmPasswordValid = validateConfirmPassword(confirmPassword);
 
-        if (password !== confirmPassword) {
-            setError('Passwords do not match');
+        if (!isNameValid || !isEmailValid || !isPasswordValid || !isConfirmPasswordValid) {
             return;
         }
 
@@ -38,7 +142,7 @@ export default function RegisterPage() {
 
         try {
             await register(email, name, password);
-            router.push('/chat');
+            router.push(`/auth/otp-verification?email=${encodeURIComponent(email)}`);
         } catch (err: any) {
             setError(err.message || 'Registration failed');
         } finally {
@@ -69,11 +173,17 @@ export default function RegisterPage() {
                             id="name"
                             type="text"
                             value={name}
-                            onChange={(e) => setName(e.target.value)}
-                            required
-                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition"
+                            onChange={handleNameChange}
+                            onBlur={() => validateName(name)}
+                            className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:border-transparent outline-none transition ${nameError
+                                ? 'border-red-500 focus:ring-red-500'
+                                : 'border-gray-300 focus:ring-indigo-500'
+                                }`}
                             placeholder="John Doe"
                         />
+                        {nameError && (
+                            <p className="mt-1 text-sm text-red-600">{nameError}</p>
+                        )}
                     </div>
 
                     <div>
@@ -84,11 +194,17 @@ export default function RegisterPage() {
                             id="email"
                             type="email"
                             value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            required
-                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition"
+                            onChange={handleEmailChange}
+                            onBlur={() => validateEmail(email)}
+                            className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:border-transparent outline-none transition ${emailError
+                                ? 'border-red-500 focus:ring-red-500'
+                                : 'border-gray-300 focus:ring-indigo-500'
+                                }`}
                             placeholder="you@example.com"
                         />
+                        {emailError && (
+                            <p className="mt-1 text-sm text-red-600">{emailError}</p>
+                        )}
                     </div>
 
                     <div>
@@ -100,9 +216,12 @@ export default function RegisterPage() {
                                 id="password"
                                 type={showPassword ? "text" : "password"}
                                 value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                required
-                                className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition"
+                                onChange={handlePasswordChange}
+                                onBlur={() => validatePassword(password)}
+                                className={`w-full px-4 py-3 pr-12 border rounded-lg focus:ring-2 focus:border-transparent outline-none transition ${passwordError
+                                    ? 'border-red-500 focus:ring-red-500'
+                                    : 'border-gray-300 focus:ring-indigo-500'
+                                    }`}
                                 placeholder="••••••••"
                             />
                             <button
@@ -117,7 +236,11 @@ export default function RegisterPage() {
                                 )}
                             </button>
                         </div>
-                        <p className="mt-1 text-sm text-gray-500">Must be at least 6 characters</p>
+                        {passwordError ? (
+                            <p className="mt-1 text-sm text-red-600">{passwordError}</p>
+                        ) : (
+                            <p className="mt-1 text-sm text-gray-500">Must contain uppercase, lowercase, number, and be 6+ characters</p>
+                        )}
                     </div>
 
                     <div>
@@ -129,9 +252,12 @@ export default function RegisterPage() {
                                 id="confirmPassword"
                                 type={showConfirmPassword ? "text" : "password"}
                                 value={confirmPassword}
-                                onChange={(e) => setConfirmPassword(e.target.value)}
-                                required
-                                className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition"
+                                onChange={handleConfirmPasswordChange}
+                                onBlur={() => validateConfirmPassword(confirmPassword)}
+                                className={`w-full px-4 py-3 pr-12 border rounded-lg focus:ring-2 focus:border-transparent outline-none transition ${confirmPasswordError
+                                    ? 'border-red-500 focus:ring-red-500'
+                                    : 'border-gray-300 focus:ring-indigo-500'
+                                    }`}
                                 placeholder="••••••••"
                             />
                             <button
@@ -146,6 +272,9 @@ export default function RegisterPage() {
                                 )}
                             </button>
                         </div>
+                        {confirmPasswordError && (
+                            <p className="mt-1 text-sm text-red-600">{confirmPasswordError}</p>
+                        )}
                     </div>
 
                     <button

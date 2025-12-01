@@ -4,8 +4,11 @@ import jwt from 'jsonwebtoken';
 import { PrismaClient } from '@prisma/client';
 import { RegisterDTO, LoginDTO, TokenResponse } from '../types';
 import { GoogleAuthService } from '../services/google-auth.service';
+import { EmailService } from '../services/email.service';
+import crypto from 'crypto';
 
 const prisma = new PrismaClient();
+const emailService = new EmailService();
 
 // Helper function to generate tokens
 const generateTokens = (userId: string, email: string) => {
@@ -80,11 +83,17 @@ export const register = async (req: Request, res: Response) => {
         });
 
         if (existingUser) {
+            // If user exists but is not verified, we can resend OTP or update details
+            // For MVP, let's just say user exists
             return res.status(409).json({ message: 'User with this email already exists' });
         }
 
         // Hash password
         const passwordHash = await bcrypt.hash(password, 10);
+
+        // Generate OTP
+        const otpCode = crypto.randomInt(100000, 999999).toString();
+        const otpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
         // Create user
         const user = await prisma.user.create({
@@ -94,6 +103,74 @@ export const register = async (req: Request, res: Response) => {
                 passwordHash,
                 authType: 'JWT',
                 profilePicUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`,
+                otpCode,
+                otpExpires,
+                isVerified: false,
+            },
+        });
+
+        // Send OTP email
+        try {
+            await emailService.sendOTP(email, otpCode);
+        } catch (emailError) {
+            console.error('Failed to send OTP email:', emailError);
+            // We might want to delete the user or allow resend. 
+            // For now, let's return success but user won't get email.
+            // In production, we should handle this better.
+        }
+
+        res.status(201).json({
+            message: 'Registration successful. Please check your email for verification code.',
+            email: user.email
+        });
+
+    } catch (error) {
+        console.error('Registration error:', error);
+        res.status(500).json({ message: 'Internal server error during registration' });
+    }
+};
+
+// Verify Email OTP
+export const verifyEmail = async (req: Request, res: Response) => {
+    try {
+        const { email: rawEmail, otp } = req.body;
+        const email = rawEmail?.toLowerCase();
+
+        if (!email || !otp) {
+            return res.status(400).json({ message: 'Email and OTP are required' });
+        }
+
+        const user = await prisma.user.findUnique({
+            where: { email },
+        });
+
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        if (user.isVerified) {
+            return res.status(400).json({ message: 'Email already verified' });
+        }
+
+        if (!user.otpCode || !user.otpExpires) {
+            return res.status(400).json({ message: 'Invalid verification request' });
+        }
+
+        if (user.otpCode !== otp) {
+            return res.status(400).json({ message: 'Invalid OTP' });
+        }
+
+        if (new Date() > user.otpExpires) {
+            return res.status(400).json({ message: 'OTP expired' });
+        }
+
+        // Verify user
+        await prisma.user.update({
+            where: { id: user.id },
+            data: {
+                isVerified: true,
+                otpCode: null,
+                otpExpires: null,
             },
         });
 
@@ -114,10 +191,11 @@ export const register = async (req: Request, res: Response) => {
             },
         };
 
-        res.status(201).json(response);
+        res.status(200).json(response);
+
     } catch (error) {
-        console.error('Registration error:', error);
-        res.status(500).json({ message: 'Internal server error during registration' });
+        console.error('Verification error:', error);
+        res.status(500).json({ message: 'Internal server error during verification' });
     }
 };
 
@@ -139,6 +217,10 @@ export const login = async (req: Request, res: Response) => {
 
         if (!user) {
             return res.status(401).json({ message: 'Invalid email or password' });
+        }
+
+        if (!user.isVerified && user.authType === 'JWT') {
+            return res.status(403).json({ message: 'Please verify your email address' });
         }
 
         // Check if user registered with JWT (not Google OAuth)
@@ -278,4 +360,4 @@ export const googleLogin = async (req: Request, res: Response) => {
     }
 };
 
-export default { register, login, refresh, googleLogin };
+export default { register, login, refresh, googleLogin, verifyEmail };

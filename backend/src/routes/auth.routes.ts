@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { register, login, refresh, googleLogin } from '../controllers/auth.controller';
+import { register, login, refresh, googleLogin, verifyEmail } from '../controllers/auth.controller';
 
 const router = Router();
 
@@ -40,6 +40,34 @@ const router = Router();
  *         description: Bad request
  */
 router.post('/register', register);
+
+/**
+ * @swagger
+ * /auth/verify:
+ *   post:
+ *     summary: Verify email with OTP
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *               - otp
+ *             properties:
+ *               email:
+ *                 type: string
+ *               otp:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Email verified successfully
+ *       400:
+ *         description: Invalid OTP or email
+ */
+router.post('/verify', verifyEmail);
 
 /**
  * @swagger

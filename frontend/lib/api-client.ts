@@ -68,6 +68,13 @@ class APIClient {
         });
     }
 
+    async verifyEmail(data: { email: string; otp: string }) {
+        return this.request('/auth/verify', {
+            method: 'POST',
+            body: JSON.stringify(data),
+        });
+    }
+
     // User endpoints
     async getUsers(token: string) {
         return this.request<any[]>('/users', { token });
